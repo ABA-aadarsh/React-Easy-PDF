@@ -1,0 +1,14 @@
+.pdf-document {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.pdf-page {
+  width: fit-content;
+}
+
+.pdf-page-container {
+  border: 1px solid white;
+  background-color: white;
+}
