@@ -56,6 +56,7 @@ interface PDFViewerProps {
   className?: string;
 }
 
+
 export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) => {
   const [numberOfPages, setNumberOfPages] = useState<number>(0);
   const [isDocumentLoading, setIsDocumentLoading] = useState<boolean>(true);
@@ -75,10 +76,11 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
   const getPageEstimatedSize = useCallback((index: number) => {
     const pageNum = index + 1;
     const dimensions = pageDimensions.get(pageNum);
+    console.log({pageNum, dimensions})
     if (dimensions) {
-      return (dimensions.height * scale) + 40; // 20px margin
+      return (dimensions.height * scale) + 20; // 20px margin
     }
-    return defaultPageHeight * scale + 40;
+    return defaultPageHeight * scale + 20;
   }, [pageDimensions, scale, defaultPageHeight]);
 
   const virtualizer = useVirtualizer({
@@ -102,6 +104,7 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
         try {
           const page = await pdf.getPage(i);
           const viewport = page.getViewport({ scale: 1 });
+          console.log({viewport, page})
           dimensionsMap.set(i, {
             width: viewport.width,
             height: viewport.height,
@@ -141,12 +144,13 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
       width: viewport.width,
       height: viewport.height,
     })));
+    console.log({viewport, p: "Page loaded"})
   }, []);
 
   // Update virtualizer when scale changes
   useEffect(() => {
     virtualizer.measure();
-  }, [scale, virtualizer]);
+  }, [scale, virtualizer, defaultPageHeight]);
 
   if (!pdfSource) {
     return (
