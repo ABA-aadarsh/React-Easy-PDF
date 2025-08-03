@@ -57,7 +57,6 @@ interface PDFViewerProps {
   className?: string;
 }
 
-
 export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) => {
   const { zoom, setZoom } = usePDF();
   const [numberOfPages, setNumberOfPages] = useState<number>(0);
@@ -69,6 +68,8 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const headerRef = useRef<HTMLDivElement>(null);
+
 
   const pdfSource = useMemo(() => {
     return src.file || src.url || src.path;
@@ -89,6 +90,7 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
     count: numberOfPages,
     getScrollElement: () => containerRef.current,
     estimateSize: getPageEstimatedSize,
+    enabled: !isDocumentLoading,
     overscan: 2, // Render 2 pages before/after visible area
   });
 
@@ -174,94 +176,130 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
   }
 
   return (
-    <div className={`pdf-viewer ${className}`}>
-      <div className="flex gap-2 mb-2">
-        <button
-          onClick={() => setZoom(Math.max(zoom - 0.1, 0.1))}
-          className="px-2 py-1 bg-gray-700 text-white rounded"
-        >
-          -
-        </button>
-        <span className="px-2">{Math.round(zoom * 100)}%</span>
-        <button
-          onClick={() => setZoom(Math.min(zoom + 0.1, 3))}
-          className="px-2 py-1 bg-gray-700 text-white rounded"
-        >
-          +
-        </button>
-      </div>
-      <Document
-        file={pdfSource}
-        options={PDFOptions}
-        loading={<LoaderComponent isLoading={true} progress={loadingProgress} />}
-        onLoadProgress={setLoadingProgress}
-        onLoadSuccess={onDocumentLoadSuccess}
-        onLoadError={onDocumentLoadError}
+    <div 
+      className={`pdf-viewer ${className}`} 
+      style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        height: '100%', 
+        width: '100%' 
+      }}
+    >
+      {/* Header - Fixed height */}
+      <div 
+        ref={headerRef}
+        className="pdf-header"
       >
-        <div
-          ref={containerRef}
-          className="pdf-container"
-          style={{
-            height: '600px',
-            overflow: 'auto',
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-          }}
-        >
-          {isDocumentLoading ? (
-            <LoaderComponent isLoading={true} progress={loadingProgress} />
-          ) : (
-            <div
-              style={{
-                height: `${virtualizer.getTotalSize()}px`,
-                width: '100%',
-                position: 'relative',
-              }}
+        <div className="" style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '10px 20px',borderBottom: '1px solid #737373ff',}}>
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={() => setZoom(Math.max(zoom - 0.1, 0.1))}
+              className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors"
             >
-              {virtualizer.getVirtualItems().map((virtualItem) => {
-                const pageNumber = virtualItem.index + 1;
-                return (
-                  <div
-                    key={virtualItem.key}
-                    ref={(el) => {
-                      if (el) {
-                        pageRefs.current.set(pageNumber, el);
-                      }
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: `${virtualItem.size}px`,
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                  >
-                    <div className="pdf-page-wrapper">
-                      <Page
-                        pageNumber={pageNumber}
-                        scale={zoom}
-                        onLoadSuccess={(page) => onPageLoadSuccess(page, pageNumber)}
-                        className="pdf-page"
-                        renderTextLayer={true}
-                        renderAnnotationLayer={true}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+              -
+            </button>
+            <span className="px-3 py-1 bg-gray-100 rounded min-w-[60px] text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={() => setZoom(Math.min(zoom + 0.1, 3))}
+              className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors"
+            >
+              +
+            </button>
+          </div>
+          
+          {numberOfPages > 0 && (
+            <div className="text-sm text-gray-600">
+              Total pages: {numberOfPages}
             </div>
           )}
         </div>
-      </Document>
-
-      {/* Page info */}
-      {numberOfPages > 0 && (
-        <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
-          <span>Total pages: {numberOfPages}</span>
-          <span>Scale: {Math.round(zoom * 100)}%</span>
-        </div>
-      )}
+      </div>
+      
+      {/* PDF Content - Takes remaining height */}
+      <div 
+        className="pdf-content" 
+        style={{ 
+          flex: '1 1 0%', 
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <Document
+          file={pdfSource}
+          options={PDFOptions}
+          loading={<LoaderComponent isLoading={true} progress={loadingProgress} />}
+          onLoadProgress={setLoadingProgress}
+          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={onDocumentLoadError}
+        >
+          <div
+            ref={containerRef}
+            className="pdf-container"
+            style={{
+              height: `90vh`, // Subtract header height + padding
+              width: '100%',
+              display:"grid",
+              gridTemplateColumns: '1fr',
+              gridAutoRows: 'auto',
+              gridGap: '10px',
+              placeItems: 'center',
+              overflow: 'auto',
+              borderRadius: '8px',
+            }}
+          >
+            {isDocumentLoading ? (
+              <LoaderComponent isLoading={true} progress={loadingProgress} />
+            ) : (
+              <div
+                style={{
+                  height: `${virtualizer.getTotalSize()}px`,
+                  width: '100%',
+                  position: 'relative',
+                }}
+              >
+                {virtualizer.getVirtualItems().map((virtualItem) => {
+                  const pageNumber = virtualItem.index + 1;
+                  return (
+                    <div
+                      key={virtualItem.key}
+                      ref={(el) => {
+                        if (el) {
+                          pageRefs.current.set(pageNumber, el);
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: 10,
+                        left: '50%',
+                        height: `${virtualItem.size}px`,
+                        transform: `translateY(${virtualItem.start}px) translateX(-50%)`,
+                      }}
+                    >
+                      <div className="pdf-page-wrapper">
+                        <Page
+                          pageNumber={pageNumber}
+                          scale={zoom}
+                          onLoadSuccess={(page) => onPageLoadSuccess(page, pageNumber)}
+                          className="pdf-page"
+                          renderTextLayer={true}
+                          renderAnnotationLayer={true}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </Document>
+      </div>
     </div>
   );
 };

@@ -9,5 +9,15 @@
 }
 
 .pdf-page-container {
-  border: 1px solid white;
+  width: auto;
+}
+
+.pdf-viewer{
+  height: 100%;
+  width: 100%;
+  background: #2f2f2f;
+}
+
+.pdf-header{
+  background: #3c3c3c;
 }
