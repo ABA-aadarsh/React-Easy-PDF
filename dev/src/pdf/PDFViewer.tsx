@@ -6,6 +6,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import "./pdf.css"
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { usePDF } from "./PDFProvider";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -58,6 +59,7 @@ interface PDFViewerProps {
 
 
 export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) => {
+  const { zoom, setZoom } = usePDF();
   const [numberOfPages, setNumberOfPages] = useState<number>(0);
   const [isDocumentLoading, setIsDocumentLoading] = useState<boolean>(true);
   const [loadingProgress, setLoadingProgress] = useState<{ loaded: number; total: number }>();
@@ -173,6 +175,21 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
 
   return (
     <div className={`pdf-viewer ${className}`}>
+      <div className="flex gap-2 mb-2">
+        <button
+          onClick={() => setZoom(Math.max(zoom - 0.1, 0.1))}
+          className="px-2 py-1 bg-gray-700 text-white rounded"
+        >
+          -
+        </button>
+        <span className="px-2">{Math.round(zoom * 100)}%</span>
+        <button
+          onClick={() => setZoom(Math.min(zoom + 0.1, 3))}
+          className="px-2 py-1 bg-gray-700 text-white rounded"
+        >
+          +
+        </button>
+      </div>
       <Document
         file={pdfSource}
         options={PDFOptions}
@@ -223,7 +240,7 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
                     <div className="pdf-page-wrapper">
                       <Page
                         pageNumber={pageNumber}
-                        scale={scale}
+                        scale={zoom}
                         onLoadSuccess={(page) => onPageLoadSuccess(page, pageNumber)}
                         className="pdf-page"
                         renderTextLayer={true}
@@ -242,7 +259,7 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
       {numberOfPages > 0 && (
         <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
           <span>Total pages: {numberOfPages}</span>
-          <span>Scale: {Math.round(scale * 100)}%</span>
+          <span>Scale: {Math.round(zoom * 100)}%</span>
         </div>
       )}
     </div>
