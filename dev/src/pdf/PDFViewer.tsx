@@ -81,10 +81,10 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
     const dimensions = pageDimensions.get(pageNum);
     console.log({pageNum, dimensions})
     if (dimensions) {
-      return (dimensions.height * scale) + 20; // 20px margin
+      return (dimensions.height * zoom) + 20; // 20px margin
     }
-    return defaultPageHeight * scale + 20;
-  }, [pageDimensions, scale, defaultPageHeight]);
+    return defaultPageHeight * zoom + 20;
+  }, [pageDimensions, zoom, defaultPageHeight]);
 
   const virtualizer = useVirtualizer({
     count: numberOfPages,
@@ -153,8 +153,9 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
 
   // Update virtualizer when scale changes
   useEffect(() => {
+    console.log("Virtualizer should re-render now")
     virtualizer.measure();
-  }, [scale, virtualizer, defaultPageHeight]);
+  }, [zoom, virtualizer, defaultPageHeight]);
 
   if (!pdfSource) {
     return (
@@ -238,6 +239,7 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
           onLoadProgress={setLoadingProgress}
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={onDocumentLoadError}
+          className={"pdf-react-pdf-document"}
         >
           <div
             ref={containerRef}

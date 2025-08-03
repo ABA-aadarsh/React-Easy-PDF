@@ -21,3 +21,7 @@
 .pdf-header{
   background: #3c3c3c;
 }
+
+.pdf-react-pdf-document {
+  height: 100%;
+}
