@@ -478,14 +478,12 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
                           pageNumber={pageNumber}
                           scale={zoom}
                           onLoadSuccess={(page) => onPageLoadSuccess(page, pageNumber)}
-                          className="pdf-page"
+                          className={
+                            `pdf-page ${showCached && "pdf-hide"}`
+                          }
                           renderTextLayer={true}
                           renderAnnotationLayer={true}
                           onRenderSuccess={(data: PageCallback) => onPageRenderSuccess(data, pageNumber)}
-                          // style={{
-                          //   opacity: showCached ? 0 : 1,
-                          //   transition: 'opacity 0.2s ease-in-out'
-                          // }}
                         />
                       </div>
                     </div>

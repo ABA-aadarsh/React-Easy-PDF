@@ -13,9 +13,7 @@ export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
   const [zoom, setZoom] = useState(1);
   const [zoomCSS, setZoomCSS] = useState<number>(1)
   useEffect(()=>{
-    setTimeout(()=>{
-      setZoom(zoomCSS)
-    },500)
+    setZoom(zoomCSS)
   },[zoomCSS])
   return (
     <PDFContext.Provider value={{ zoom, setZoom, zoomCSS, setZoomCSS }}>
