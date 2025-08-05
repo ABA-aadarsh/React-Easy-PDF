@@ -7,6 +7,7 @@ import 'react-pdf/dist/Page/TextLayer.css';
 import "./pdf.css"
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { usePDF } from "./PDFProvider";
+import type { OnRenderSuccess, PageCallback } from "react-pdf/dist/shared/types.js";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -47,6 +48,12 @@ interface PageDimensions {
   height: number;
 }
 
+interface CachedPageData {
+  imageUrl: string;
+  scale: number;
+  timestamp: number;
+}
+
 interface PDFViewerProps {
   src: {
     url?: string;
@@ -58,33 +65,134 @@ interface PDFViewerProps {
 }
 
 export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) => {
-  const { zoom, setZoom } = usePDF();
+  const { zoom, setZoom, zoomCSS, setZoomCSS } = usePDF();
   const [numberOfPages, setNumberOfPages] = useState<number>(0);
   const [isDocumentLoading, setIsDocumentLoading] = useState<boolean>(true);
   const [loadingProgress, setLoadingProgress] = useState<{ loaded: number; total: number }>();
   const [pageDimensions, setPageDimensions] = useState<Map<number, PageDimensions>>(new Map());
   const [defaultPageHeight, setDefaultPageHeight] = useState<number>(800);
+  const [defaultPageWidth, setDefaultPageWidth] = useState<number>(200);
   const [error, setError] = useState<string | null>(null);
+  
+  // Page caching state
+  const [pageCache, setPageCache] = useState<Map<string, CachedPageData>>(new Map());
+  const [renderingPages, setRenderingPages] = useState<Set<number>>(new Set());
+  const [currentZoomCSS, setCurrentZoomCSS] = useState<number>(zoomCSS);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const headerRef = useRef<HTMLDivElement>(null);
 
-
   const pdfSource = useMemo(() => {
     return src.file || src.url || src.path;
   }, [src]);
+
+  // Generate cache key for a page
+  const getCacheKey = useCallback((pageNumber: number, scale: number) => {
+    return `page-${pageNumber}-scale-${scale.toFixed(2)}`;
+  }, []);
+
+  // Capture page canvas as image
+  const capturePageImage = useCallback((pageNumber: number, canvas: HTMLCanvasElement, scale: number) => {
+    try {
+      const imageUrl = canvas.toDataURL('image/png', 0.8);
+      const cacheKey = getCacheKey(pageNumber, scale);
+      
+      setPageCache(prev => {
+        const newCache = new Map(prev);
+        
+        // Clean up old cache entry for this page if it exists
+        const oldKey = Array.from(prev.keys()).find(key => 
+          key.startsWith(`page-${pageNumber}-`) && key !== cacheKey
+        );
+        if (oldKey && prev.has(oldKey)) {
+          const oldData = prev.get(oldKey);
+          if (oldData) {
+            URL.revokeObjectURL(oldData.imageUrl);
+          }
+          newCache.delete(oldKey);
+        }
+        
+        newCache.set(cacheKey, {
+          imageUrl,
+          scale,
+          timestamp: Date.now()
+        });
+        
+        return newCache;
+      });
+    } catch (error) {
+      console.warn(`Failed to cache page ${pageNumber}:`, error);
+    }
+  }, [getCacheKey]);
+
+  // Get cached page data
+  const getCachedPage = useCallback((pageNumber: number, scale: number) => {
+    const cacheKey = getCacheKey(pageNumber, scale);
+    return pageCache.get(cacheKey);
+  }, [pageCache, getCacheKey]);
+
+  // Check if we should show cached version
+  const shouldShowCached = useCallback((pageNumber: number) => {
+    const isRendering = renderingPages.has(pageNumber);
+    const hasCache = Array.from(pageCache.keys()).some(key => 
+      key.startsWith(`page-${pageNumber}-`)
+    );
+    return isRendering && hasCache;
+  }, [renderingPages, pageCache]);
+
+  // Get best available cached version for scaling
+  const getBestCachedVersion = useCallback((pageNumber: number) => {
+    const pageKeys = Array.from(pageCache.keys()).filter(key => 
+      key.startsWith(`page-${pageNumber}-`)
+    );
+    
+    if (pageKeys.length === 0) return null;
+    
+    // Find the cached version with scale closest to current zoom
+    let bestKey = pageKeys[0];
+    let bestScale = parseFloat(bestKey.split('-scale-')[1]);
+    let bestDiff = Math.abs(bestScale - zoomCSS);
+    
+    for (const key of pageKeys) {
+      const scale = parseFloat(key.split('-scale-')[1]);
+      const diff = Math.abs(scale - zoomCSS);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestKey = key;
+        bestScale = scale;
+      }
+    }
+    
+    return pageCache.get(bestKey);
+  }, [pageCache, zoomCSS]);
+
+  // Handle zoom change
+  useEffect(() => {
+    if (Math.abs(zoomCSS - currentZoomCSS) > 0.01) {
+      // Mark all visible pages as rendering when zoom changes
+      const visibleItems = virtualizer.getVirtualItems();
+      const newRenderingPages = new Set<number>();
+      
+      visibleItems.forEach(item => {
+        const pageNumber = item.index + 1;
+        newRenderingPages.add(pageNumber);
+      });
+      
+      setRenderingPages(newRenderingPages);
+      setCurrentZoomCSS(zoomCSS);
+    }
+  }, [zoomCSS, currentZoomCSS]);
 
   // Calculate estimated size for each page
   const getPageEstimatedSize = useCallback((index: number) => {
     const pageNum = index + 1;
     const dimensions = pageDimensions.get(pageNum);
-    console.log({pageNum, dimensions})
     if (dimensions) {
-      return (dimensions.height * zoom) + 20; // 20px margin
+      return (dimensions.height * zoomCSS) + 20; // 20px margin
     }
-    return defaultPageHeight * zoom + 20;
-  }, [pageDimensions, zoom, defaultPageHeight]);
+    return defaultPageHeight * zoomCSS + 20;
+  }, [pageDimensions, zoomCSS, defaultPageHeight]);
 
   const virtualizer = useVirtualizer({
     count: numberOfPages,
@@ -124,6 +232,7 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
       const firstPageDimensions = dimensionsMap.get(1);
       if (firstPageDimensions) {
         setDefaultPageHeight(firstPageDimensions.height);
+        setDefaultPageWidth(firstPageDimensions.width)
       }
 
       setIsDocumentLoading(false);
@@ -148,14 +257,47 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
       width: viewport.width,
       height: viewport.height,
     })));
-    console.log({viewport, p: "Page loaded"})
+    console.log({viewport, p: "Page loaded: " + pageNumber})
   }, []);
+
+  // Handle page render success - capture the rendered page
+  const onPageRenderSuccess = useCallback((data: PageCallback, pageNumber: number) => {
+    console.log({event: "Page Rendered", data, pageNumber});
+    
+    // Remove from rendering set
+    setRenderingPages(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(pageNumber);
+      return newSet;
+    });
+    
+    // Find canvas and capture it
+    const pageElement = pageRefs.current.get(pageNumber);
+    if (pageElement) {
+      const canvas = pageElement.querySelector('canvas');
+      if (canvas) {
+        // Small delay to ensure canvas is fully rendered
+        setTimeout(() => {
+          capturePageImage(pageNumber, canvas, zoomCSS);
+        }, 100);
+      }
+    }
+  }, [capturePageImage, zoomCSS]);
 
   // Update virtualizer when scale changes
   useEffect(() => {
     console.log("Virtualizer should re-render now")
     virtualizer.measure();
-  }, [zoom, virtualizer, defaultPageHeight]);
+  }, [zoomCSS, virtualizer, defaultPageHeight]);
+
+  // Cleanup cache on unmount
+  useEffect(() => {
+    return () => {
+      pageCache.forEach(data => {
+        URL.revokeObjectURL(data.imageUrl);
+      });
+    };
+  }, []);
 
   if (!pdfSource) {
     return (
@@ -198,16 +340,16 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
           padding: '10px 20px',borderBottom: '1px solid #737373ff',}}>
           <div className="flex gap-2 items-center">
             <button
-              onClick={() => setZoom(Math.max(zoom - 0.1, 0.1))}
+              onClick={() => setZoomCSS(Math.max(zoomCSS - 0.3, 0.1))}
               className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors"
             >
               -
             </button>
             <span className="px-3 py-1 bg-gray-100 rounded min-w-[60px] text-center">
-              {Math.round(zoom * 100)}%
+              {Math.round(zoomCSS * 100)}%
             </span>
             <button
-              onClick={() => setZoom(Math.min(zoom + 0.1, 3))}
+              onClick={() => setZoomCSS(Math.min(zoomCSS + 0.3, 3))}
               className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors"
             >
               +
@@ -268,6 +410,11 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
               >
                 {virtualizer.getVirtualItems().map((virtualItem) => {
                   const pageNumber = virtualItem.index + 1;
+                  const pageWidth = (pageDimensions.get(pageNumber)?.width || defaultPageWidth) * zoomCSS
+                  const pageHeight = (pageDimensions.get(pageNumber)?.height || defaultPageHeight) * zoomCSS
+                  const showCached = shouldShowCached(pageNumber);
+                  const cachedData = getBestCachedVersion(pageNumber);
+                  
                   return (
                     <div
                       key={virtualItem.key}
@@ -281,10 +428,52 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
                         top: 10,
                         left: '50%',
                         height: `${virtualItem.size}px`,
+                        width: `${pageWidth}px`,
                         transform: `translateY(${virtualItem.start}px) translateX(-50%)`,
+                        backgroundColor: "red",
+                        border: "1px solid yellow",
+                        display: "flex",
+                        justifyContent: "center"
                       }}
                     >
-                      <div className="pdf-page-wrapper">
+                      <div className="pdf-page-wrapper"
+                        style={{
+                          width: `${pageWidth}px`,
+                          height: `${pageHeight}px`,
+                          position: 'relative'
+                        }}
+                      >
+                        {/* Cached image overlay */}
+                        {cachedData && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              zIndex: 10,
+                              backgroundColor: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <img
+                              src={cachedData.imageUrl}
+                              alt={`Page ${pageNumber} cached`}
+                              style={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                objectFit: 'contain',
+                                transform: `scale(${zoomCSS / cachedData.scale})`,
+                                transformOrigin: 'center'
+                              }}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Actual PDF page */}
                         <Page
                           pageNumber={pageNumber}
                           scale={zoom}
@@ -292,6 +481,11 @@ export const PDFViewer = ({ src, scale = 1, className = "" }: PDFViewerProps) =>
                           className="pdf-page"
                           renderTextLayer={true}
                           renderAnnotationLayer={true}
+                          onRenderSuccess={(data: PageCallback) => onPageRenderSuccess(data, pageNumber)}
+                          // style={{
+                          //   opacity: showCached ? 0 : 1,
+                          //   transition: 'opacity 0.2s ease-in-out'
+                          // }}
                         />
                       </div>
                     </div>
