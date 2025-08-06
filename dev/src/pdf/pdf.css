@@ -19,14 +19,35 @@
   width: 100% !important;
   height: 100% !important;
 }
-
+button{
+  cursor: pointer;
+}
+button:hover{
+  scale: 1.02;
+}
+button:active{
+  scale: 0.98;
+}
 .pdf-hide {
   opacity: 0;
 }
-
-.flex-gap {
+.flex{
   display: flex;
+  align-items: center;
+}
+.gap-20 {
+  gap: 40px;
+}
+.gap-10{
+  gap: 20px;
+}
+.gap-5{
   gap: 10px;
+}
+.flex-center{
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .input-small{
   padding: 5px;
@@ -114,6 +135,12 @@
   justify-content: center;
 }
 
+.no-style{
+  border: none;
+  background: none;
+  padding: 0;
+}
+
 .pdf-page-wrapper.loading::before {
   content: 'Rendering...';
   color: #666;
@@ -123,7 +150,7 @@
 }
 
 .pdf-header {
-  background: #3c3c3c;
+  background: #343434;
   min-height: max-content;
   /* Ensure header stays above content */
   z-index: 100;
