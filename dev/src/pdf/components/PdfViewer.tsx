@@ -7,24 +7,26 @@ import { usePDF } from "../PDFProvider";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { PageCallback } from "react-pdf/dist/shared/types.js";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
+import "../pdf.css"
 
-export default function PDFViewer({src}: PDFViewerProps) {
+
+export default function PDFViewer({ src }: PDFViewerProps) {
     const [renderingPages, setRenderingPages] = useState<Set<number>>(new Set());
-    const [pageCache, setPageCache] = useState<Map<string, CachedPageData>>(new Map());
+    const [pageCache, setPageCache] = useState<Map<number, CachedPageData>>(new Map());
 
-    const { document, numberOfPages = 0, zoom, dimension, zoomCSS,error,setNumberOfPages } = usePDF();
+    const { pdfDocument: document, numberOfPages = 0, zoom, dimension, zoomCSS, error, setNumberOfPages } = usePDF();
     const containerRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
     const getPageEstimatedSize = useCallback((index: number) => {
-    
-    const pageNum = index + 1;
-    const dimensions = dimension.pageDimensions && dimension.pageDimensions.get(pageNum);
-    if (dimensions) {
-      return (dimensions.height * zoomCSS) + 20; // 20px margin
-    }
-    return dimension.defaultPageHeight && (dimension.defaultPageHeight * zoomCSS + 20);
-  }, [dimension.pageDimensions, zoomCSS, dimension.defaultPageHeight]);
+
+        const pageNum = index + 1;
+        const dimensions = dimension.pageDimensions && dimension.pageDimensions.get(pageNum);
+        if (dimensions) {
+            return (dimensions.height * zoomCSS) + 20; // 20px margin
+        }
+        return dimension.defaultPageHeight && (dimension.defaultPageHeight * zoomCSS + 20);
+    }, [dimension.pageDimensions, zoomCSS, dimension.defaultPageHeight]);
 
     const virtualizer = useVirtualizer({
         count: numberOfPages,
@@ -37,87 +39,85 @@ export default function PDFViewer({src}: PDFViewerProps) {
     const pdfSource = useMemo(() => {
         return src.file || src.url || src.path;
     }, [src]);
-    
+
     const shouldShowCached = useCallback((pageNumber: number) => {
         const isRendering = renderingPages.has(pageNumber);
-        const hasCache = Array.from(pageCache.keys()).some(key => 
-            key.startsWith(`page-${pageNumber}-`)
-        );
+        const hasCache = pageCache.get(pageNumber)
         return isRendering && hasCache;
     }, [renderingPages, pageCache]);
 
-    const getBestCachedVersion = useCallback((pageNumber: number) => {
-        const pageKeys = Array.from(pageCache.keys()).filter(key => 
-            key.startsWith(`page-${pageNumber}-`)
-        );
-        
-        if (pageKeys.length === 0) return null;
-        
-        // Find the cached version with scale closest to current zoom
-        let bestKey = pageKeys[0];
-        let bestScale = parseFloat(bestKey.split('-scale-')[1]);
-        let bestDiff = Math.abs(bestScale - zoomCSS);
-        
-        for (const key of pageKeys) {
-            const scale = parseFloat(key.split('-scale-')[1]);
-            const diff = Math.abs(scale - zoomCSS);
-            if (diff < bestDiff) {
-                bestDiff = diff;
-                bestKey = key;
-                bestScale = scale;
-            }
-        }
-        
-        return pageCache.get(bestKey) || null;
-    }, [pageCache, zoomCSS]);
+    // const getBestCachedVersion = useCallback((pageNumber: number) => {
+    //     const pageKeys = Array.from(pageCache.keys()).filter(key => 
+    //         key.startsWith(`page-${pageNumber}-`)
+    //     );
+
+    //     if (pageKeys.length === 0) return null;
+
+    //     // Find the cached version with scale closest to current zoom
+    //     let bestKey = pageKeys[0];
+    //     let bestScale = parseFloat(bestKey.split('-scale-')[1]);
+    //     let bestDiff = Math.abs(bestScale - zoomCSS);
+
+    //     for (const key of pageKeys) {
+    //         const scale = parseFloat(key.split('-scale-')[1]);
+    //         const diff = Math.abs(scale - zoomCSS);
+    //         if (diff < bestDiff) {
+    //             bestDiff = diff;
+    //             bestKey = key;
+    //             bestScale = scale;
+    //         }
+    //     }
+
+    //     return pageCache.get(bestKey) || null;
+    // }, [pageCache, zoomCSS]);
 
     const onDocumentLoadError = useCallback((err: Error) => {
-    console.error('PDF load error:', err);
-    error.setError && error.setError('Failed to load PDF. Please check the file and try again.');
-    document.setIsDocumentLoading(false);
-  }, []);
+        console.error('PDF load error:', err);
+        error.setError && error.setError('Failed to load PDF. Please check the file and try again.');
+        document.setIsDocumentLoading(false);
+    }, []);
 
     const onDocumentLoadSuccess = useCallback(async (pdf: PDFDocumentProxy) => {
-    
-    try {
-      
-      setNumberOfPages && setNumberOfPages(pdf.numPages);
-      error.setError && error.setError(null);
 
-      // Get dimensions for first few pages to establish better estimates
-      const dimensionsMap = new Map<number, PageDimensions>();
-      const pagesToPreload = Math.min(3, pdf.numPages); // Preload first 3 pages
-
-      for (let i = 1; i <= pagesToPreload; i++) {
         try {
-          const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: 1 });
-          console.log({viewport, page})
-          dimensionsMap.set(i, {
-            width: viewport.width,
-            height: viewport.height,
-          });
-        } catch (pageError) {
-          console.warn(`Failed to load dimensions for page ${i}:`, pageError);
+
+            setNumberOfPages && setNumberOfPages(pdf.numPages);
+            error.setError && error.setError(null);
+
+            // Get dimensions for first few pages to establish better estimates
+            const dimensionsMap = new Map<number, PageDimensions>();
+            const pagesToPreload = Math.min(3, pdf.numPages); // Preload first 3 pages
+
+            for (let i = 1; i <= pagesToPreload; i++) {
+                try {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 1 });
+                    console.log({ viewport, page })
+                    dimensionsMap.set(i, {
+                        width: viewport.width,
+                        height: viewport.height,
+                    });
+                } catch (pageError) {
+                    console.warn(`Failed to load dimensions for page ${i}:`, pageError);
+                }
+            }
+
+            dimension.setPageDimensions && dimension.setPageDimensions(dimensionsMap);
+
+            // Set default height based on first page or fallback
+            const firstPageDimensions = dimensionsMap.get(1);
+            if (firstPageDimensions) {
+                dimension.setDefaultPageHeight && dimension.setDefaultPageHeight(firstPageDimensions.height);
+                dimension.setDefaultPageWidth && dimension.setDefaultPageWidth(firstPageDimensions.width)
+            }
+
+            document.setIsDocumentLoading(false);
+        } catch (err) {
+            console.error('Error loading PDF:', err);
+            error.setError && error.setError('Failed to load PDF document');
+            document.setIsDocumentLoading(false);
         }
-      }
-
-      dimension.setPageDimensions && dimension.setPageDimensions(dimensionsMap);
-      
-      // Set default height based on first page or fallback
-      const firstPageDimensions = dimensionsMap.get(1);
-      if (firstPageDimensions) {
-        dimension.setDefaultPageHeight && dimension.setDefaultPageHeight(firstPageDimensions.height);
-        dimension.setDefaultPageWidth && dimension.setDefaultPageWidth(firstPageDimensions.width)
-      }
-
-      document.setIsDocumentLoading(false);
-    } catch (err) {
-        console.error('Error loading PDF:', err);
-        error.setError && error.setError('Failed to load PDF document');
-        document.setIsDocumentLoading(false);
-    }
-  }, []);
+    }, []);
 
     const onPageLoadSuccess = useCallback((page: PDFPageProxy, pageNumber: number) => {
         const viewport = page.getViewport({ scale: 1 });
@@ -129,56 +129,38 @@ export default function PDFViewer({src}: PDFViewerProps) {
             });
             dimension.setPageDimensions(newMap);
         }
-        console.log({viewport, p: "Page loaded: " + pageNumber});
+        console.log({ viewport, p: "Page loaded: " + pageNumber });
     }, [dimension]);
-
-    const getCacheKey = useCallback((pageNumber: number, scale: number) => {
-        return `page-${pageNumber}-scale-${scale.toFixed(2)}`;
-    }, []);
-
-    const capturePageImage = useCallback((pageNumber: number, canvas: HTMLCanvasElement, scale: number) => {
+    const capturePageImage = useCallback((pageNumber: number, canvas: HTMLCanvasElement) => {
         try {
             const imageUrl = canvas.toDataURL('image/png', 0.8);
-            const cacheKey = getCacheKey(pageNumber, scale);
-            
+            const cacheKey = pageNumber;
+
             setPageCache(prev => {
                 const newCache = new Map(prev);
-                
-                // Clean up old cache entry for this page if it exists
-                const oldKey = Array.from(prev.keys()).find(key => 
-                    key.startsWith(`page-${pageNumber}-`) && key !== cacheKey
-                );
-                if (oldKey && prev.has(oldKey)) {
-                    const oldData = prev.get(oldKey);
-                    if (oldData) {
-                        URL.revokeObjectURL(oldData.imageUrl);
-                    }
-                    newCache.delete(oldKey);
-                }
-                
                 newCache.set(cacheKey, {
                     imageUrl,
-                    scale,
+                    scale: 1,
                     timestamp: Date.now()
                 });
-                
+
                 return newCache;
             });
         } catch (error) {
             console.warn(`Failed to cache page ${pageNumber}:`, error);
         }
-    }, [getCacheKey]);
-    
+    }, []);
+
     const onPageRenderSuccess = useCallback((data: PageCallback, pageNumber: number) => {
-        console.log({event: "Page Rendered", data, pageNumber});
-        
+        console.log({ event: "Page Rendered", data, pageNumber });
+
         // Remove from rendering set
         setRenderingPages(prev => {
             const newSet = new Set(prev);
             newSet.delete(pageNumber);
             return newSet;
         });
-        
+
         // Find canvas and capture it
         const pageElement = pageRefs.current.get(pageNumber);
         if (pageElement) {
@@ -186,7 +168,7 @@ export default function PDFViewer({src}: PDFViewerProps) {
             if (canvas) {
                 // Small delay to ensure canvas is fully rendered
                 setTimeout(() => {
-                    capturePageImage(pageNumber, canvas, zoomCSS);
+                    capturePageImage(pageNumber, canvas);
                 }, 100);
             }
         }
@@ -195,8 +177,8 @@ export default function PDFViewer({src}: PDFViewerProps) {
     useEffect(() => {
         console.log("Virtualizer should re-render now")
         virtualizer.measure();
-      }, [zoomCSS, virtualizer, dimension.defaultPageHeight]);
-    
+    }, [zoomCSS, virtualizer, dimension.defaultPageHeight]);
+
 
     return (
         <div>
@@ -239,8 +221,8 @@ export default function PDFViewer({src}: PDFViewerProps) {
                                 const pageWidth = (dimension.pageDimensions?.get(pageNumber)?.width || dimension.defaultPageWidth) * zoomCSS;
                                 const pageHeight = (dimension.pageDimensions?.get(pageNumber)?.height || dimension.defaultPageHeight) * zoomCSS;
                                 const showCached = shouldShowCached(pageNumber);
-                                const cachedData = getBestCachedVersion(pageNumber);
-                                
+                                const cachedData = pageCache.get(pageNumber);
+
                                 return (
                                     <div
                                         key={virtualItem.key}
@@ -262,7 +244,7 @@ export default function PDFViewer({src}: PDFViewerProps) {
                                             justifyContent: "center"
                                         }}
                                     >
-                                        <div 
+                                        <div
                                             className="pdf-page-wrapper"
                                             style={{
                                                 width: `${pageWidth}px`,
@@ -299,7 +281,7 @@ export default function PDFViewer({src}: PDFViewerProps) {
                                                     />
                                                 </div>
                                             )}
-                                            
+
                                             {/* Actual PDF page */}
                                             <Page
                                                 pageNumber={pageNumber}

@@ -1,0 +1,45 @@
+.pdf-react-pdf-document {
+
+}
+
+.pdf-page-virtualizer-container {
+  height: 90vh; /*NOTE: This height should be adjusted so that navbar is always at top*/
+  overflow: auto;
+}
+
+.pdf-page-virtualizer-container-innerbox {
+  width: 100%;
+  position: relative;
+}
+
+.pdf-virtual-item {
+  position: absolute;
+  left: 50%;
+  border: 1px solid red;
+}
+
+.pdf-react-pdf-page {
+  position: relative;
+  z-index: 11;
+}
+
+.pdf-cached-image-container{
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+}
+.pdf-cached-image{
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+
+.invisible {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  display: hidden;
+}

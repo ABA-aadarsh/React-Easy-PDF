@@ -5,12 +5,12 @@ interface PDFContextType {
   setZoom: (z: number) => void;
   zoomCSS: number;
   setZoomCSS: (z: number)=>void;
-  numberOfPages?: number;
-  setNumberOfPages?: (n: number) => void;
-  zoomStep?: number;
-  currentPage?: number;
-  setCurrentPage?: (n: number) => void;
-  document:{
+  numberOfPages: number;
+  setNumberOfPages: (n: number) => void;
+  zoomStep: number;
+  currentPage: number;
+  setCurrentPage: (n: number) => void;
+  pdfDocument:{
     isDocumentLoading: boolean;
     setIsDocumentLoading: (loading: boolean) => void;
     loadingProgress?: { loaded: number; total: number };
@@ -21,12 +21,12 @@ interface PDFContextType {
     setError?: (message: string | null) => void;
   }
   dimension:{
-    pageDimensions?: Map<number, { width: number; height: number }>;
-    setPageDimensions?: (dimensions: Map<number, { width: number; height: number }>) => void;
+    pageDimensions: Map<number, { width: number; height: number }>;
+    setPageDimensions: (dimensions: Map<number, { width: number; height: number }>) => void;
     defaultPageHeight: number;
-    setDefaultPageHeight?: (height: number) => void;
+    setDefaultPageHeight: (height: number) => void;
     defaultPageWidth: number;
-    setDefaultPageWidth?: (width: number) => void;
+    setDefaultPageWidth: (width: number) => void;
   }
 }
 
@@ -37,14 +37,14 @@ export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
   const [zoom, setZoom] = useState(1);
   const [zoomCSS, setZoomCSS] = useState<number>(1)
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [numberOfPages, setNumberOfPages] = useState<number>(10);
+  const [numberOfPages, setNumberOfPages] = useState<number>(0);
   const [loadingProgress, setLoadingProgress] = useState<{ loaded: number; total: number }>();
   const [isDocumentLoading, setIsDocumentLoading] = useState<boolean>(false);
   const [message, setError] = useState<string | null>(null);
   const [pageDimensions, setPageDimensions] = useState<Map<number, { width: number; height: number }>>(new Map());
-  const [defaultPageHeight, setDefaultPageHeight] = useState<number>(800);
+  const [defaultPageHeight, setDefaultPageHeight] = useState<number>(1000);
   const [defaultPageWidth, setDefaultPageWidth] = useState<number>(500);
-  const document = {
+  const pdfDocument = {
     isDocumentLoading,
     setIsDocumentLoading,
     loadingProgress,
@@ -65,8 +65,9 @@ export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(()=>{
     setZoom(zoomCSS)
   },[zoomCSS])
+
   return (
-    <PDFContext.Provider value={{error,dimension, zoom, setZoom, zoomCSS, setZoomCSS, numberOfPages, setNumberOfPages, zoomStep , currentPage, setCurrentPage,document}}>
+    <PDFContext.Provider value={{error,dimension, zoom, setZoom, zoomCSS, setZoomCSS, numberOfPages, setNumberOfPages, zoomStep , currentPage, setCurrentPage,pdfDocument: pdfDocument}}>
       {children}
     </PDFContext.Provider>
   );
