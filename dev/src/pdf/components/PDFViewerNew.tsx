@@ -37,7 +37,9 @@ export default function PDFViewer(
   const capturePageImage = useCallback((pageNumber:number, canvas: HTMLCanvasElement)=>{
     const imageURL = canvas.toDataURL("image/png", 1)
     setPageCache((prev)=>{
-      prev.set(pageNumber, imageURL)
+      if(!prev.has(pageNumber)){
+        prev.set(pageNumber, imageURL)
+      }
       return prev
     })
   },[])
