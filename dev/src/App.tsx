@@ -3,6 +3,7 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 import { PDFViewer } from './pdf/PDFViewer'
+import PDFTemp from './pdf/PDFTemp'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -11,7 +12,7 @@ function App() {
 
   return (
     <>
-      <PDFViewer
+      <PDFTemp
         src={{
           url: url
         }}
