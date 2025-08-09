@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 interface PDFContextType {
   zoom: number;
@@ -6,8 +6,12 @@ interface PDFContextType {
   setZoom: (z: number) => void;
   zoomCSS: number;
   setZoomCSS: (z: number)=>void;
+  headerRef?: React.RefObject<HTMLDivElement | null>;
+  setHeaderRef?: (ref: React.RefObject<HTMLDivElement | null>) => void;
   numberOfPages: number;
   setNumberOfPages: (n: number) => void;
+  sidebarOpen: boolean;
+  setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   zoomStep: number;
   currentPage: number;
   setCurrentPage: (n: number) => void;
@@ -29,6 +33,10 @@ interface PDFContextType {
     defaultPageWidth: number;
     setDefaultPageWidth: (width: number) => void;
   }
+  layout: {
+    headerHeightVh: number;
+    remainingHeightVh: number;
+  }
 }
 
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
@@ -36,8 +44,8 @@ const PDFContext = createContext<PDFContextType | undefined>(undefined);
 export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
   const zoomStep = 0.4;
   const thumbnailScale = 0.16;
-  const [zoom, setZoom] = useState(1);
-  const [zoomCSS, setZoomCSS] = useState<number>(1)
+  const [zoom, setZoom] = useState(1.33);
+  const [zoomCSS, setZoomCSS] = useState<number>(1.33)
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [numberOfPages, setNumberOfPages] = useState<number>(0);
   const [loadingProgress, setLoadingProgress] = useState<{ loaded: number; total: number }>();
@@ -46,16 +54,60 @@ export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
   const [pageDimensions, setPageDimensions] = useState<Map<number, { width: number; height: number }>>(new Map());
   const [defaultPageHeight, setDefaultPageHeight] = useState<number>(1000);
   const [defaultPageWidth, setDefaultPageWidth] = useState<number>(500);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [headerHeightVh, setHeaderHeightVh] = useState<number>(0);
+  const [remainingHeightVh, setRemainingHeightVh] = useState<number>(100);
+  
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  
+  const setHeaderRef = (ref: React.RefObject<HTMLDivElement | null>) => {
+    headerRef.current = ref.current;
+  };
+
+  // Calculate header height and remaining space in vh
+  const calculateHeaderHeight = () => {
+    if (headerRef.current) {
+      const headerHeight = headerRef.current.getBoundingClientRect().height;
+      const viewportHeight = window.innerHeight;
+      const headerHeightInVh = (headerHeight / viewportHeight) * 100;
+      const remainingSpace = 100 - headerHeightInVh;
+      
+      setHeaderHeightVh(headerHeightInVh);
+      setRemainingHeightVh(remainingSpace);
+    }
+  };
+
+  // Update header height on mount and when header ref changes
+  useEffect(() => {
+    if (headerRef.current) {
+      calculateHeaderHeight();
+      
+      // Recalculate on window resize
+      const handleResize = () => calculateHeaderHeight();
+      window.addEventListener('resize', handleResize);
+      
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [headerRef.current]);
+
+  // Also recalculate when sidebar state changes (might affect header height)
+  useEffect(() => {
+    const timeoutId = setTimeout(calculateHeaderHeight, 10); // Small delay for layout changes
+    return () => clearTimeout(timeoutId);
+  }, [sidebarOpen]);
+
   const pdfDocument = {
     isDocumentLoading,
     setIsDocumentLoading,
     loadingProgress,
     setLoadingProgress
   };
+  
   const error = {
     message,
     setError
   };
+  
   const dimension = {
     pageDimensions,
     setPageDimensions,
@@ -64,12 +116,37 @@ export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
     defaultPageWidth,
     setDefaultPageWidth
   };
+
+  const layout = {
+    headerHeightVh,
+    remainingHeightVh
+  };
+  
   useEffect(()=>{
     setZoom(zoomCSS)
   },[zoomCSS])
 
   return (
-    <PDFContext.Provider value={{error,dimension, zoom, setZoom, zoomCSS, setZoomCSS, numberOfPages, setNumberOfPages, zoomStep , currentPage, setCurrentPage,pdfDocument: pdfDocument, thumbnailScale}}>
+    <PDFContext.Provider value={{
+      headerRef,
+      setHeaderRef,
+      error,
+      dimension,
+      zoom,
+      setZoom,
+      zoomCSS,
+      setZoomCSS,
+      numberOfPages,
+      setNumberOfPages,
+      zoomStep,
+      currentPage,
+      setCurrentPage,
+      pdfDocument: pdfDocument,
+      thumbnailScale,
+      sidebarOpen,
+      setSidebarOpen,
+      layout
+    }}>
       {children}
     </PDFContext.Provider>
   );

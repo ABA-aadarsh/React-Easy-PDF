@@ -3,7 +3,7 @@
 }
 
 .pdf-page-virtualizer-container {
-  height: 90vh; /*NOTE: This height should be adjusted so that navbar is always at top*/
+  /*height given from the page itself*/
   overflow: auto;
 }
 
@@ -49,9 +49,9 @@
 .pdf-thumbnail-virtualizer-container {
   z-index: 20;
   position: absolute;
-  left: 0px;
-  height: 90vh;
-  width: 300px;
+  background-color: rgb(63, 63, 63);
+  /*height fromm page*/
+  width: 200px;
   overflow: auto;
 }
 
@@ -62,4 +62,59 @@
 .pdf-thumbnail-virtualizer-container-innerbox {
   width: 100%;
   position: relative;
+}
+
+
+
+/* scroll bar */
+
+
+/* Minimal scrollbar styles */
+.minimal-scrollbar {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #888 transparent;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+.minimal-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.minimal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.minimal-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 3px;
+}
+
+.minimal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}
+
+/* Even thinner variant */
+.ultra-minimal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #666 transparent;
+}
+
+.ultra-minimal-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.ultra-minimal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ultra-minimal-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #666;
+  border-radius: 2px;
+}
+
+.ultra-minimal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #999;
 }

@@ -186,7 +186,7 @@ button:active{
 }
 
 .pdf-header {
-  background: #343434;
+  background: #3c3c3c;
   min-height: max-content;
   z-index: 100;
   position: relative;

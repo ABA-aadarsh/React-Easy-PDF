@@ -25,9 +25,12 @@ export default function PDFViewer(
     error,
     setZoom,
     setZoomCSS,
+    setSidebarOpen,
+    sidebarOpen,
     zoom,
     zoomCSS,
     currentPage,
+    layout,
     setCurrentPage,
     setNumberOfPages,
     zoomStep
@@ -220,15 +223,21 @@ export default function PDFViewer(
       onLoadError={onDocumentLoadError}
       className={"pdf-react-pdf-pdfDocument"}
     >
+      
       <div
         ref={thumbnailVirtualizerContainer}
-        className="pdf-thumbnail-virtualizer-container"
+        className="pdf-thumbnail-virtualizer-container minimal-scrollbar "
+        style={{
+          left: sidebarOpen ? "0px" : "-300px",
+          transition: "left 0.1s ease-in",
+          height: `${layout.remainingHeightVh}vh`
+        }}
       >
         <div
           style={{
             height: `${thumbnailVirtualizer.getTotalSize()}px`
           }}
-          className="pdf-thumbnail-virtualizer-container-innerbox"
+          className="pdf-thumbnail-virtualizer-container-innerbox "
         >
           {
             thumbnailVirtualizer.getVirtualItems().map(
@@ -272,9 +281,13 @@ export default function PDFViewer(
           }
         </div>
       </div>
+      
       <div
         ref={pageVirtualizerContainer}
         className="pdf-page-virtualizer-container"
+        style={{
+          height: `${layout.remainingHeightVh}vh`
+        }}
         // onScroll={(() => {
         //   timeOutRef.current = setTimeout(() => {
         //     const scrollOffset = pageVirtualizer.scrollOffset || 0
