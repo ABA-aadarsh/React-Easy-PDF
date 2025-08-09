@@ -1,4 +1,4 @@
-import { Document, Page } from "react-pdf"
+import { Document, Page, Thumbnail } from "react-pdf"
 import { usePDF } from "../PDFProvider"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { PDFOptions } from "./Options"
@@ -8,6 +8,7 @@ import type { PDFDocumentProxy } from "pdfjs-dist"
 import "./pdf.css"
 import type { PageDimensions } from "../interface/PDFInterface"
 import type { PageCallback } from "react-pdf/dist/shared/types.js"
+import { useThrottle } from "../hooks/use-throttle"
 
 
 interface props {
@@ -34,15 +35,15 @@ export default function PDFViewer(
 
   const [pageCache, setPageCache] = useState<Map<number, string>>(new Map())
 
-  const capturePageImage = useCallback((pageNumber:number, canvas: HTMLCanvasElement)=>{
+  const capturePageImage = useCallback((pageNumber: number, canvas: HTMLCanvasElement) => {
     const imageURL = canvas.toDataURL("image/png", 1)
-    setPageCache((prev)=>{
-      if(!prev.has(pageNumber)){
+    setPageCache((prev) => {
+      if (!prev.has(pageNumber)) {
         prev.set(pageNumber, imageURL)
       }
       return prev
     })
-  },[])
+  }, [])
 
   const onDocumentLoadSuccess = useCallback(
     async (pdf: PDFDocumentProxy) => {
@@ -54,7 +55,7 @@ export default function PDFViewer(
         try {
           const page = await pdf.getPage(i);
           const viewport = page.getViewport({ scale: 1 });
-          console.log({viewport, page})
+          // console.log({ viewport, page })
           dimensionsMap.set(i, {
             width: viewport.width,
             height: viewport.height,
@@ -65,7 +66,7 @@ export default function PDFViewer(
       }
 
       dimension.setPageDimensions(dimensionsMap);
-      
+
       // Set default height based on first page or fallback
       const firstPageDimensions = dimensionsMap.get(1);
       if (firstPageDimensions) {
@@ -75,20 +76,30 @@ export default function PDFViewer(
 
       pdfDocument.setIsDocumentLoading(false);
     },
-  [])
+    [])
   const onDocumentLoadError = () => {
 
   }
 
   const pageVirtualizerContainer = useRef<HTMLDivElement>(null)
+  const thumbnailVirtualizerContainer = useRef<HTMLDivElement>(null)
   const getPageEstimatedSize = useCallback((index: number) => {
     const pageNumber = index + 1;
     const dimensions = dimension.pageDimensions.get(pageNumber);
     if (dimensions) {
-      return (dimensions.height * zoomCSS) + 20; // 20px margin
+      return (dimensions.height * zoomCSS);
     }
-    return (dimension.defaultPageHeight * zoomCSS + 20)
+    return (dimension.defaultPageHeight * zoomCSS)
   }, [zoomCSS, dimension.defaultPageHeight, dimension.pageDimensions])
+
+  const getThumbnailEstimatedSize = useCallback((index: number)=>{
+    const pageNumber = index + 1;
+    const dimensions = dimension.pageDimensions.get(pageNumber)
+    if(dimensions){
+      return (dimensions.height * 0.3)
+    }
+    return (dimension.defaultPageHeight * 0.3)
+  },[dimension.defaultPageHeight, dimension.pageDimensions])
 
   const pageVirtualizer = useVirtualizer(
     {
@@ -96,59 +107,91 @@ export default function PDFViewer(
       getScrollElement: () => pageVirtualizerContainer.current,
       estimateSize: getPageEstimatedSize,
       enabled: !pdfDocument.isDocumentLoading,
-      overscan: 2
+      overscan: 2,
+      gap: 20
     }
   )
+  const thumbnailVirtualizer = useVirtualizer({
+    count: numberOfPages,
+    getScrollElement: ()=>thumbnailVirtualizerContainer.current,
+    enabled: !pdfDocument.isDocumentLoading,
+    estimateSize: getThumbnailEstimatedSize,
+    gap: 10
+  })
 
-  const onPageRenderSuccess = useCallback((data: PageCallback, pageNumber: number)=>{
+  const onPageRenderSuccess = useCallback((data: PageCallback, pageNumber: number) => {
 
-    console.log(
-      {
-        pageNumber,
-        message: "Rendered Canvas should be visible",
-      }
-    )
-    const virtualElement: HTMLDivElement | null = document.querySelector(`#virtual-item-${pageNumber}`)
-    if(virtualElement){
+    // console.log(
+    //   {
+    //     pageNumber,
+    //     message: "Rendered Canvas should be visible",
+    //   }
+    // )
+    const virtualElement: HTMLDivElement | null = document.querySelector(`#virtual-page-item-${pageNumber}`)
+    if (virtualElement) {
       const canvasElement = virtualElement.querySelector("canvas")
-      if(canvasElement){
-        setTimeout(()=>{
+      if (canvasElement) {
+        setTimeout(() => {
           capturePageImage(pageNumber, canvasElement)
         }, 100)
       }
       const pageElement = virtualElement.querySelector(".pdf-react-pdf-page")
-      if(pageElement){
+      if (pageElement) {
         pageElement.classList.remove("invisible")
       }
     }
-  },[capturePageImage,pageCache])
+  }, [capturePageImage, pageCache])
 
-  const onPageLoadSuccess = useCallback((page: PageCallback, pageNumber: number)=>{
-    console.log(
-      {
-        pageNumber,
-        message: "Loaded.Canvas should no be visible",
-      }
-    )
-    const virtualElement: HTMLDivElement | null = document.querySelector(`#virtual-item-${pageNumber}`)
-    if(virtualElement){
+  const onPageLoadSuccess = useCallback((page: PageCallback, pageNumber: number) => {
+    // console.log(
+    //   {
+    //     pageNumber,
+    //     message: "Loaded.Canvas should no be visible",
+    //   }
+    // )
+    const viewport = page.getViewport({ scale: 1 });
+    if (dimension.setPageDimensions && dimension.pageDimensions) {
+      const newMap = new Map(dimension.pageDimensions);
+      newMap.set(pageNumber, {
+        width: viewport.width,
+        height: viewport.height,
+      });
+      dimension.setPageDimensions(newMap);
+    }
+    const virtualElement: HTMLDivElement | null = document.querySelector(`#virtual-page-item-${pageNumber}`)
+    if (virtualElement) {
       const pageElement = virtualElement.querySelector(".pdf-react-pdf-page")
-      if(pageElement){
+      if (pageElement) {
         pageElement.classList.add("invisible")
       }
     }
-  },[])
+  }, [])
+
+  const handleScroll = useThrottle(() => {
+    const scrollOffset = pageVirtualizer.scrollOffset || 0
+    const items = pageVirtualizer.getVirtualItems().map((x) => ({ pageNumber: x.index + 1, offset: Math.abs(x.start - scrollOffset) }))
+      .sort((a, b) => a.offset - b.offset);
+    console.log({ items })
+    const currentPage = items[0].pageNumber
+    setCurrentPage(currentPage)
+  }, 5)
+
+  const timeOutRef = useRef<number>(null)
+
+  useEffect(() => {
+    pageVirtualizer.measure()
+  }, [zoomCSS, dimension.defaultPageHeight, pageVirtualizer])
 
   useEffect(()=>{
-    pageVirtualizer.measure()
-  },[zoomCSS, dimension.defaultPageHeight, pageVirtualizer])
+    thumbnailVirtualizer.measure()
+  },[thumbnailVirtualizer, dimension.defaultPageHeight])
   return (
     <Document
       file={pdfSource}
       options={PDFOptions}
       loading={
-        <Loader 
-          isLoading={true} 
+        <Loader
+          isLoading={true}
           progress={pdfDocument.loadingProgress?.loaded}
         />
       }
@@ -158,8 +201,61 @@ export default function PDFViewer(
       className={"pdf-react-pdf-pdfDocument"}
     >
       <div
+        ref={thumbnailVirtualizerContainer}
+        className="pdf-thumbnail-virtualizer-container"
+      >
+        <div
+          style={{
+            height: `${thumbnailVirtualizer.getTotalSize()}px`
+          }}
+          className="pdf-thumbnail-virtualizer-container-innerbox"
+        >
+          {
+            thumbnailVirtualizer.getVirtualItems().map(
+              (thumbnailVirtualItem)=>{
+                const pageNumber = thumbnailVirtualItem.index + 1
+
+                const thumbnailWidth = (dimension.pageDimensions.get(pageNumber)?.width || dimension.defaultPageWidth) * 0.3
+                return (
+                  <div
+                    key={thumbnailVirtualItem.key}
+                    style={{
+                      width: `${thumbnailWidth}px`,
+                      height: `${thumbnailVirtualItem.size}px`,
+                      transform: `translateY(${thumbnailVirtualItem.start}px)`,
+                      overflow: "hidden"
+                    }}
+                    className="pdf-thumbnail-virtual-item"
+                    id={`virtual-thumbnail-item-${thumbnailVirtualItem.index + 1}`}
+                  >
+                    <Thumbnail
+                      pageNumber={pageNumber}
+                      scale={0.3}
+                      onClick={()=>{
+                        pageVirtualizer.scrollToIndex(pageNumber - 1)
+                      }}
+                    />
+                  </div>
+                )
+              }
+            )
+          }
+        </div>
+      </div>
+      <div
         ref={pageVirtualizerContainer}
         className="pdf-page-virtualizer-container"
+        onScroll={(() => {
+          timeOutRef.current = setTimeout(() => {
+            const scrollOffset = pageVirtualizer.scrollOffset || 0
+            const items = pageVirtualizer.getVirtualItems().map((x) => ({ pageNumber: x.index + 1, offset: Math.abs(x.start - scrollOffset) }))
+              .sort((a, b) => a.offset - b.offset);
+            console.log({ items })
+            const currentPage = items[0].pageNumber
+            setCurrentPage(currentPage)
+          }, 10)
+        })}
+        // onScroll={handleScroll}
       >
         <div
           style={{
@@ -169,23 +265,24 @@ export default function PDFViewer(
         >
           {
             pageVirtualizer.getVirtualItems().map(
-              (virtualItem) => {
-                const pageNumber = virtualItem.index + 1;
+              (pageVirtualItem) => {
+                const pageNumber = pageVirtualItem.index + 1;
                 const cachedImage = pageCache.get(pageNumber)
                 const pageWidth = (dimension.pageDimensions.get(pageNumber)?.width || dimension.defaultPageWidth) * zoomCSS
                 return (
                   <div
-                    key={virtualItem.key}
+                    key={pageVirtualItem.key}
                     style={{
                       width: `${pageWidth}px`,
-                      height: `${virtualItem.size}px`,
-                      transform: `translateY(${virtualItem.start}px) translateX(-50%)`
+                      height: `${pageVirtualItem.size}px`,
+                      transform: `translateY(${pageVirtualItem.start}px) translateX(-50%)`,
+                      overflow: "hidden"
                     }}
-                    className="pdf-virtual-item"
-                    id={`virtual-item-${virtualItem.index+1}`}
+                    className="pdf-page-virtual-item"
+                    id={`virtual-page-item-${pageVirtualItem.index + 1}`}
                   >
                     {
-                      cachedImage && 
+                      cachedImage &&
                       <div className="pdf-cached-image-container">
                         <img
                           src={cachedImage}
@@ -200,10 +297,10 @@ export default function PDFViewer(
                       renderTextLayer={true}
                       renderAnnotationLayer={true}
                       className={"pdf-react-pdf-page"}
-                      onRenderSuccess={(data: PageCallback)=>{
+                      onRenderSuccess={(data: PageCallback) => {
                         onPageRenderSuccess(data, pageNumber)
                       }}
-                      onLoadSuccess={(page)=>{
+                      onLoadSuccess={(page) => {
                         onPageLoadSuccess(page, pageNumber)
                       }}
                     />

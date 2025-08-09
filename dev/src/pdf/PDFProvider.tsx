@@ -33,7 +33,7 @@ interface PDFContextType {
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
 
 export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
-  const zoomStep = 0.1;
+  const zoomStep = 0.4;
   const [zoom, setZoom] = useState(1);
   const [zoomCSS, setZoomCSS] = useState<number>(1)
   const [currentPage, setCurrentPage] = useState<number>(1);

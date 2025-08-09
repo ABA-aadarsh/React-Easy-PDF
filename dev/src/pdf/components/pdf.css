@@ -1,5 +1,5 @@
 .pdf-react-pdf-document {
-
+  position: relative;
 }
 
 .pdf-page-virtualizer-container {
@@ -12,8 +12,9 @@
   position: relative;
 }
 
-.pdf-virtual-item {
+.pdf-page-virtual-item {
   position: absolute;
+  background-color: white;
   left: 50%;
   border: 1px solid red;
 }
@@ -24,6 +25,7 @@
 }
 
 .pdf-cached-image-container{
+  background-color: white;
   position: absolute;
   top: 0px;
   left: 0px;
@@ -42,4 +44,21 @@
   visibility: hidden !important;
   opacity: 0 !important;
   display: hidden;
+}
+
+.pdf-thumbnail-virtualizer-container {
+  z-index: 20;
+  position: absolute;
+  left: 0px;
+  height: 90vh;
+  width: 300px;
+  overflow: auto;
+}
+
+.pdf-thumbnail-virtual-item {
+  position: absolute;
+}
+.pdf-thumbnail-virtualizer-container-innerbox {
+  width: 100%;
+  position: relative;
 }
