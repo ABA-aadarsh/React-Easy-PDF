@@ -113,14 +113,18 @@ export default function PDFViewer(
       enabled: !pdfDocument.isDocumentLoading,
       overscan: 2,
       gap: 20,
+      paddingStart: 10,
     }
   )
+  
   const thumbnailVirtualizer = useVirtualizer({
     count: numberOfPages,
     getScrollElement: () => thumbnailVirtualizerContainer.current,
     enabled: !pdfDocument.isDocumentLoading,
     estimateSize: getThumbnailEstimatedSize,
-    gap: 10
+    gap: 10,
+    paddingStart: 5,
+    
   })
 
   const onPageRenderSuccess = useCallback((data: PageCallback, pageNumber: number) => {
@@ -224,15 +228,30 @@ export default function PDFViewer(
       className={"pdf-react-pdf-pdfDocument"}
     >
       
+      {/* thumbnail sidebar */}
       <div
         ref={thumbnailVirtualizerContainer}
         className="pdf-thumbnail-virtualizer-container minimal-scrollbar "
         style={{
-          left: sidebarOpen ? "0px" : "-300px",
+          left: sidebarOpen ? "0px" : `-${thumbnailVirtualizerContainer.current?.offsetWidth || 0}px`,
           transition: "left 0.1s ease-in",
           height: `${layout.remainingHeightVh}vh`
         }}
       >
+        <div style={{position: "sticky", top: 0, zIndex: 10, backgroundColor: "inherit", padding: "5px 20px"}}>
+          <nav className="flex gap-10">
+            <div>
+              <button className="no-style" onClick={() => { setSidebarOpen(prev => !prev) }} >
+                <img src="/svg/thumbnail.svg" alt="page view" style={{ height: "16px", marginBlock:"auto" }} />
+              </button>
+            </div>
+            <div>
+              <button className="no-style" onClick={() => { setSidebarOpen(prev => !prev) }} >
+                <img src="/svg/ContentList.svg" alt="content View" style={{ height: "20px", marginBlock:"auto" }} />
+              </button>
+            </div>
+          </nav>
+        </div>
         <div
           style={{
             height: `${thumbnailVirtualizer.getTotalSize()}px`
@@ -274,11 +293,43 @@ export default function PDFViewer(
                         pageVirtualizer.scrollToIndex(pageNumber - 1)
                       }}
                     />
+                    <div className="pdf-thumbnail-page-number-container">
+                      <span className="pdf-thumbnail-page-number">
+                        {pageNumber}
+                      </span>
+                    </div>
                   </div>
                 )
               }
             )
           }
+        </div>
+        <div className="" style={{
+          position: "sticky",
+          bottom: 0,
+          float: "right",
+          height: "100%",
+          width:10,
+          cursor: "ew-resize",
+        }} onMouseDown={(e) => {
+          e.preventDefault();
+          const startX = e.clientX;
+          const startWidth = thumbnailVirtualizerContainer.current?.offsetWidth || 0;
+
+          const onMouseMove = (moveEvent: MouseEvent) => {
+            const newWidth = startWidth + (moveEvent.clientX - startX);
+            thumbnailVirtualizerContainer.current!.style.width = `${newWidth}px`;
+          };
+
+          const onMouseUp = () => {
+            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mouseup", onMouseUp);
+          };
+
+          document.addEventListener("mousemove", onMouseMove);
+          document.addEventListener("mouseup", onMouseUp);
+        }}>
+
         </div>
       </div>
       
@@ -321,6 +372,7 @@ export default function PDFViewer(
               (pageVirtualItem) => {
                 const pageNumber = pageVirtualItem.index + 1;
                 const cachedImage = pageCache.get(pageNumber)
+                
                 const pageWidth = (dimension.pageDimensions.get(pageNumber)?.width || dimension.defaultPageWidth) * zoomCSS
                 return (
                   <div
@@ -347,6 +399,7 @@ export default function PDFViewer(
                     <Page
                       pageNumber={pageNumber}
                       scale={zoom}
+                      rotate={layout.rotate}
                       renderTextLayer={true}
                       renderAnnotationLayer={true}
                       className={"pdf-react-pdf-page"}

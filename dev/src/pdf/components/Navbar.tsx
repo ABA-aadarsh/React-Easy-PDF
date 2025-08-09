@@ -2,7 +2,7 @@ import { usePDF } from "../PDFProvider";
 import { useEffect, useRef } from "react";
 
 export default function NavBar() {
-    const {setHeaderRef, zoomCSS, setZoomCSS, numberOfPages=0, zoomStep=0.3 ,currentPage=1, setCurrentPage, setSidebarOpen } = usePDF();
+    const {setHeaderRef, zoomCSS,layout, setZoomCSS, numberOfPages=0, zoomStep=0.3 ,currentPage=1, setCurrentPage, setSidebarOpen } = usePDF();
     const navRef = useRef<HTMLDivElement | null>(null);
     
     // Set the header ref when component mounts
@@ -75,7 +75,7 @@ export default function NavBar() {
                     )}
 
                     <div style={{marginBlock:"auto"}} className="flex gap-5">
-                        <button className="no-style" onClick={()=>{console.log("rotate Clicked")}}>
+                        <button className="no-style" onClick={()=>{layout.setRotate((prev) => (prev + 90) % 360)}}>
                             <img src="/svg/rotate.svg" alt="rotate" style={{height:"16px",color:"#fff"}} />
                         </button>
                         <button className="no-style" onClick={()=>{console.log("download Clicked")}}>

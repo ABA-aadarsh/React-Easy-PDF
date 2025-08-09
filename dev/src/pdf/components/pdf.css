@@ -54,6 +54,17 @@
   width: 200px;
   overflow: auto;
 }
+.pdf-thumbnail-page-number-container {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: max-content;
+  z-index: 101;
+  padding: 2px;
+  padding-inline: 6px;
+  font-size: 10px;
+  background-color: rgba(0, 0, 0, 0.5);
+}
 
 .pdf-thumbnail-virtual-item {
   position: absolute;
