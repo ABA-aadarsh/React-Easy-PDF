@@ -18,6 +18,7 @@ export default function PDFViewer(
   { src }: props
 ) {
   const {
+    thumbnailScale,
     pdfDocument,
     numberOfPages,
     dimension,
@@ -96,9 +97,9 @@ export default function PDFViewer(
     const pageNumber = index + 1;
     const dimensions = dimension.pageDimensions.get(pageNumber)
     if (dimensions) {
-      return (dimensions.height * 0.3)
+      return (dimensions.height * thumbnailScale)
     }
-    return (dimension.defaultPageHeight * 0.3)
+    return (dimension.defaultPageHeight * thumbnailScale)
   }, [dimension.defaultPageHeight, dimension.pageDimensions])
 
   const pageVirtualizer = useVirtualizer(
@@ -166,7 +167,6 @@ export default function PDFViewer(
       }
     }
   }, [])
-
   const handleScroll = useThrottle(() => {
     if (pdfDocument.isDocumentLoading) return;
     const scrollOffset = pageVirtualizer.scrollOffset || 0
@@ -177,7 +177,20 @@ export default function PDFViewer(
     if (items.length == 0) return;
     const currentPage = items[0].pageNumber
     setCurrentPage(currentPage)
-  }, 5)
+  }, 100)
+
+  const handleScrollNoThrottle = ()=>{
+    console.log("No throttle scrolling")
+    if (pdfDocument.isDocumentLoading) return;
+    const scrollOffset = pageVirtualizer.scrollOffset || 0
+    const items = pageVirtualizer
+      .getVirtualItems()
+      .map((x) => ({ pageNumber: x.index + 1, offset: Math.abs(x.start - scrollOffset) }))
+      .sort((a, b) => a.offset - b.offset);
+    if (items.length == 0) return;
+    const currentPage = items[0].pageNumber
+    setCurrentPage(currentPage)
+  }
 
   const timeOutRef = useRef<number>(null)
 
@@ -190,7 +203,7 @@ export default function PDFViewer(
   }, [thumbnailVirtualizer, dimension.defaultPageHeight])
 
   useEffect(() => {
-    handleScroll()
+    handleScrollNoThrottle()
   }, [pageVirtualizer.scrollOffset, pdfDocument.isDocumentLoading])
   return (
     <Document
@@ -221,8 +234,8 @@ export default function PDFViewer(
             thumbnailVirtualizer.getVirtualItems().map(
               (thumbnailVirtualItem) => {
                 const pageNumber = thumbnailVirtualItem.index + 1
-
-                const thumbnailWidth = (dimension.pageDimensions.get(pageNumber)?.width || dimension.defaultPageWidth) * 0.3
+                const cachedImage = pageCache.get(pageNumber)
+                const thumbnailWidth = (dimension.pageDimensions.get(pageNumber)?.width || dimension.defaultPageWidth) * thumbnailScale
                 return (
                   <div
                     key={thumbnailVirtualItem.key}
@@ -235,9 +248,19 @@ export default function PDFViewer(
                     className="pdf-thumbnail-virtual-item"
                     id={`virtual-thumbnail-item-${thumbnailVirtualItem.index + 1}`}
                   >
+                    {
+                      cachedImage &&
+                      <div className="pdf-cached-image-container">
+                        <img
+                          src={cachedImage}
+                          alt={`Page ${pageNumber} cached`}
+                          className="pdf-cached-image"
+                        />
+                      </div>
+                    }
                     <Thumbnail
                       pageNumber={pageNumber}
-                      scale={0.3}
+                      scale={thumbnailScale}
                       onClick={() => {
                         pageVirtualizer.scrollToIndex(pageNumber - 1)
                       }}
@@ -262,18 +285,17 @@ export default function PDFViewer(
         //     setCurrentPage(currentPage)
         //   }, 10)
         // })}
-        // onScroll={handleScroll}
 
-        onScrollEnd={() => {
-          setTimeout(() => {
-            const scrollOffset = pageVirtualizer.scrollOffset || 0
-            const items = pageVirtualizer.getVirtualItems().map((x) => ({ pageNumber: x.index + 1, offset: Math.abs(x.start - scrollOffset) }))
-              .sort((a, b) => a.offset - b.offset);
-            console.log({ items })
-            const currentPage = items[0].pageNumber
-            setCurrentPage(currentPage)
-          }, 50)
-        }}
+        // onScrollEnd={() => {
+        //   setTimeout(() => {
+        //     const scrollOffset = pageVirtualizer.scrollOffset || 0
+        //     const items = pageVirtualizer.getVirtualItems().map((x) => ({ pageNumber: x.index + 1, offset: Math.abs(x.start - scrollOffset) }))
+        //       .sort((a, b) => a.offset - b.offset);
+        //     console.log({ items })
+        //     const currentPage = items[0].pageNumber
+        //     setCurrentPage(currentPage)
+        //   }, 0)
+        // }}
       >
         <div
           style={{

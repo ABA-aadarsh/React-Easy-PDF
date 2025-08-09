@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 interface PDFContextType {
   zoom: number;
+  thumbnailScale: number;
   setZoom: (z: number) => void;
   zoomCSS: number;
   setZoomCSS: (z: number)=>void;
@@ -34,6 +35,7 @@ const PDFContext = createContext<PDFContextType | undefined>(undefined);
 
 export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
   const zoomStep = 0.4;
+  const thumbnailScale = 0.16;
   const [zoom, setZoom] = useState(1);
   const [zoomCSS, setZoomCSS] = useState<number>(1)
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -67,7 +69,7 @@ export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
   },[zoomCSS])
 
   return (
-    <PDFContext.Provider value={{error,dimension, zoom, setZoom, zoomCSS, setZoomCSS, numberOfPages, setNumberOfPages, zoomStep , currentPage, setCurrentPage,pdfDocument: pdfDocument}}>
+    <PDFContext.Provider value={{error,dimension, zoom, setZoom, zoomCSS, setZoomCSS, numberOfPages, setNumberOfPages, zoomStep , currentPage, setCurrentPage,pdfDocument: pdfDocument, thumbnailScale}}>
       {children}
     </PDFContext.Provider>
   );
