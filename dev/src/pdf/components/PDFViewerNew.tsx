@@ -41,13 +41,14 @@ export default function PDFViewer(
 
   const capturePageImage = useCallback((pageNumber: number, canvas: HTMLCanvasElement) => {
     const imageURL = canvas.toDataURL("image/png", 1)
+    
     setPageCache((prev) => {
       if (!prev.has(pageNumber)) {
         prev.set(pageNumber, imageURL)
       }
       return prev
     })
-  }, [])
+  }, [layout.rotate])
 
   const onDocumentLoadSuccess = useCallback(
     async (pdf: PDFDocumentProxy) => {
@@ -58,6 +59,7 @@ export default function PDFViewer(
       for (let i = 1; i <= pagesToPreload; i++) {
         try {
           const page = await pdf.getPage(i);
+          console.log({page})
           const viewport = page.getViewport({ scale: 1 });
           // console.log({ viewport, page })
           dimensionsMap.set(i, {
@@ -90,11 +92,14 @@ export default function PDFViewer(
   const getPageEstimatedSize = useCallback((index: number) => {
     const pageNumber = index + 1;
     const dimensions = dimension.pageDimensions.get(pageNumber);
-    if (dimensions) {
-      return (dimensions.height * zoomCSS);
+    if(layout.rotate == 90 || layout.rotate == 270){
+      if (dimensions) return (dimensions.width * zoomCSS);
+      else return (dimension.defaultPageWidth * zoomCSS);
+    }else{
+      if(dimensions) return (dimensions.height * zoomCSS);
+      else return (dimension.defaultPageHeight * zoomCSS)
     }
-    return (dimension.defaultPageHeight * zoomCSS)
-  }, [zoomCSS, dimension.defaultPageHeight, dimension.pageDimensions])
+  }, [zoomCSS, dimension.defaultPageHeight, dimension.pageDimensions, layout.rotate])
 
   const getThumbnailEstimatedSize = useCallback((index: number) => {
     const pageNumber = index + 1;
@@ -203,7 +208,8 @@ export default function PDFViewer(
 
   useEffect(() => {
     pageVirtualizer.measure()
-  }, [zoomCSS, dimension.defaultPageHeight, pageVirtualizer])
+    console.log("page is remeasured")
+  }, [zoomCSS, dimension.defaultPageHeight, pageVirtualizer, layout.rotate])
 
   useEffect(() => {
     thumbnailVirtualizer.measure()
@@ -278,11 +284,11 @@ export default function PDFViewer(
                   >
                     {
                       cachedImage &&
-                      <div className="pdf-cached-image-container">
+                      <div className="pdf-thumbnail-cached-image-container">
                         <img
                           src={cachedImage}
                           alt={`Page ${pageNumber} cached`}
-                          className="pdf-cached-image"
+                          className="pdf-thumbnail-cached-image"
                         />
                       </div>
                     }
@@ -373,7 +379,11 @@ export default function PDFViewer(
                 const pageNumber = pageVirtualItem.index + 1;
                 const cachedImage = pageCache.get(pageNumber)
                 
-                const pageWidth = (dimension.pageDimensions.get(pageNumber)?.width || dimension.defaultPageWidth) * zoomCSS
+                let pageWidth = (dimension.pageDimensions.get(pageNumber)?.width || dimension.defaultPageWidth) * zoomCSS
+
+                if(layout.rotate == 90  || layout.rotate == 270){
+                  pageWidth = (dimension.pageDimensions.get(pageNumber)?.height || dimension.defaultPageHeight) * zoomCSS
+                }
                 return (
                   <div
                     key={pageVirtualItem.key}
@@ -388,7 +398,19 @@ export default function PDFViewer(
                   >
                     {
                       cachedImage &&
-                      <div className="pdf-cached-image-container">
+                      <div className="pdf-cached-image-container"
+                        style={{
+                          transform: `rotate(${layout.rotate}deg)`,
+                          ...(layout.rotate == 90 || layout.rotate == 270) ?
+                          {
+                            width: "100%",
+                            height: "auto"
+                          }: {
+                            width: "auto",
+                            height: "100%"
+                          }
+                        }}
+                      >
                         <img
                           src={cachedImage}
                           alt={`Page ${pageNumber} cached`}
