@@ -33,7 +33,9 @@ export default function PDFViewer(
     layout,
     setCurrentPage,
     setNumberOfPages,
-    zoomStep
+    zoomStep,
+    shouldPageBeScrolled,
+    setShouldPageBeScrolled
   } = usePDF()
   const pdfSource = useMemo(() => src, [])
 
@@ -271,9 +273,14 @@ export default function PDFViewer(
   }
 
   useEffect(() => {
+    const prevScrollOffset = pageVirtualizer.scrollOffset
+    const prevTotalHeight = pageVirtualizer.getTotalSize()
     pageVirtualizer.measure()
+    const newTotalHeight = pageVirtualizer.getTotalSize()
+    const newScrollOffset = (prevScrollOffset! / prevTotalHeight) * newTotalHeight
+    pageVirtualizer.scrollToOffset(newScrollOffset)
     console.log("page is remeasured")
-  }, [zoomCSS, dimension.defaultPageHeight, pageVirtualizer, layout.rotate])
+  }, [zoomCSS, dimension.defaultPageHeight, layout.rotate])
 
   useEffect(() => {
     thumbnailVirtualizer.measure()
@@ -282,6 +289,15 @@ export default function PDFViewer(
   useEffect(() => {
     handleScrollNoThrottle()
   }, [pageVirtualizer.scrollOffset, pdfDocument.isDocumentLoading, zoom, layout.rotate])
+
+  useEffect(()=>{
+    // callback for scroll update
+    if(shouldPageBeScrolled){
+      const index = currentPage - 1
+      pageVirtualizer.scrollToIndex(index)
+      setShouldPageBeScrolled(false)
+    }
+  },[shouldPageBeScrolled])
   return (
     <Document
       file={pdfSource}

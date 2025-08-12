@@ -2,7 +2,7 @@ import { usePDF } from "../PDFProvider";
 import { useEffect, useRef } from "react";
 
 export default function NavBar() {
-    const {setHeaderRef, zoomCSS,layout, setZoomCSS, numberOfPages=0, zoomStep=0.3 ,currentPage=1, setCurrentPage, setSidebarOpen } = usePDF();
+    const {setHeaderRef, zoomCSS,layout, setZoomCSS, numberOfPages=0, zoomStep=0.3 ,currentPage=1, setCurrentPage, setSidebarOpen, setShouldPageBeScrolled} = usePDF();
     const navRef = useRef<HTMLDivElement | null>(null);
     
     // Set the header ref when component mounts
@@ -68,8 +68,20 @@ export default function NavBar() {
                 <div className="flex gap-20">
                     {numberOfPages > 0 && (
                         <div className="flex-center" style={{gap:"5px"}}>
-                            <button className="no-style flex-center" onClick={()=>{setCurrentPage && setCurrentPage(Math.min(Math.max((currentPage+1),1),numberOfPages))}}><img src="/svg/up.svg" alt="up" style={{height:"16px",color:"#fff"}} /></button> 
-                            <button className="no-style flex-center" onClick={()=>{setCurrentPage && setCurrentPage(Math.min(Math.max((currentPage-1),1),numberOfPages))}}><img src="/svg/up.svg" alt="down" style={{height:"16px",color:"#fff",rotate:"180deg"}} /></button> 
+                            <button className="no-style flex-center"
+                                onClick={()=>{
+                                    setCurrentPage(prev=>prev - 1)
+                                    setShouldPageBeScrolled(true)
+                                }}
+                            ><img src="/svg/up.svg" alt="up" style={{height:"16px",color:"#fff"}} /></button> 
+                            <button className="no-style flex-center" 
+                            onClick={()=>{
+                                setCurrentPage(prev=>prev + 1)
+                                setShouldPageBeScrolled(true)
+                                
+                            }}>
+                                <img src="/svg/up.svg" alt="down" style={{height:"16px",color:"#fff",rotate:"180deg"}} />
+                            </button> 
                             <input className="input-small no-arrows" type="number" value={currentPage} onChange={(e)=>{setCurrentPage && setCurrentPage(Math.min(Math.max(parseInt(e.target.value),1),numberOfPages))}}/> of {numberOfPages}
                         </div>
                     )}

@@ -15,7 +15,7 @@ interface PDFContextType {
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   zoomStep: number;
   currentPage: number;
-  setCurrentPage: (n: number) => void;
+  setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   pdfDocument:{
     isDocumentLoading: boolean;
     setIsDocumentLoading: (loading: boolean) => void;
@@ -39,7 +39,10 @@ interface PDFContextType {
     remainingHeightVh: number;
     rotate: RotationValue;
     setRotate: React.Dispatch<React.SetStateAction<RotationValue>>;
-  }
+  },
+  shouldPageBeScrolled: boolean,
+  setShouldPageBeScrolled: React.Dispatch<React.SetStateAction<boolean>>;
+  onCommitZoom: ()=>void
 }
 
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
@@ -61,6 +64,8 @@ export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
   const [headerHeightVh, setHeaderHeightVh] = useState<number>(0);
   const [remainingHeightVh, setRemainingHeightVh] = useState<number>(100);
   const [rotate, setRotate] = useState<RotationValue>(0);
+
+  const [shouldPageBeScrolled, setShouldPageBeScrolled] = useState<boolean>(false)
   
   const headerRef = useRef<HTMLDivElement | null>(null);
   
@@ -127,11 +132,8 @@ export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
     rotate,
     setRotate
   };
-  
-  useEffect(()=>{
-    setZoom(zoomCSS)
-  },[zoomCSS])
 
+  const onCommitZoom = ()=>setZoom(zoomCSS);
   return (
     <PDFContext.Provider value={{
       headerRef,
@@ -151,7 +153,10 @@ export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
       thumbnailScale,
       sidebarOpen,
       setSidebarOpen,
-      layout
+      layout,
+      shouldPageBeScrolled,
+      setShouldPageBeScrolled,
+      onCommitZoom
     }}>
       {children}
     </PDFContext.Provider>
