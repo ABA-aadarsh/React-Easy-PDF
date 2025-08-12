@@ -20,6 +20,7 @@
 }
 
 .pdf-react-pdf-page {
+  background-color: transparent !important;
   position: relative;
   z-index: 11;
 }
@@ -29,27 +30,10 @@
   position: absolute;
   top: 0px;
   left: 0px;
-  width: 100%;
-  height: 100%;
   z-index: 10;
 }
 .pdf-cached-image{
   object-fit: cover;
-}
-
-.pdf-thumbnail-cached-image-container {
-  background-color: white;
-  position: absolute;
-  top: 0px;
-  left: 0px;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-}
-.pdf-thumbnail-cached-image {
-  object-fit: contain;
-  width: 100%;
-  height: auto;
 }
 
 
@@ -80,14 +64,43 @@
 }
 
 .pdf-thumbnail-virtual-item {
+  cursor: pointer;
+  box-sizing: border-box;
   position: absolute;
+  padding: 10px;
   left: 50%;
 }
 .pdf-thumbnail-virtualizer-container-innerbox {
   width: 100%;
   position: relative;
 }
+.pdf-thumbnail-virtual-item:hover {
+  background-color: #9997974e;
+}
 
+.pdf-thumbnail-isCurrentPage {
+  background-color: #999797b5 !important;
+}
+
+.pdf-thumbnail-cached-image-container {
+  background-color: white;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+}
+.pdf-thumbnail-cached-image {
+  object-fit: contain;
+  width: 100%;
+  height: auto;
+}
+
+.pdf-thumbnail-virtual-item-innerbox{
+  box-sizing: border-box;
+  position: relative;
+}
 
 
 /* scroll bar */

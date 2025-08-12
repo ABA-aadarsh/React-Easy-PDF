@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import type { RotationValue } from "./interface/PDFInterface";
 
 interface PDFContextType {
   zoom: number;
@@ -36,8 +37,8 @@ interface PDFContextType {
   layout: {
     headerHeightVh: number;
     remainingHeightVh: number;
-    rotate: number;
-    setRotate: React.Dispatch<React.SetStateAction<number>>;
+    rotate: RotationValue;
+    setRotate: React.Dispatch<React.SetStateAction<RotationValue>>;
   }
 }
 
@@ -59,7 +60,7 @@ export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [headerHeightVh, setHeaderHeightVh] = useState<number>(0);
   const [remainingHeightVh, setRemainingHeightVh] = useState<number>(100);
-  const [rotate, setRotate] = useState<number>(0);
+  const [rotate, setRotate] = useState<RotationValue>(0);
   
   const headerRef = useRef<HTMLDivElement | null>(null);
   

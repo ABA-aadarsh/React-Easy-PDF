@@ -13,8 +13,14 @@ export interface PageDimensions {
   height: number;
 }
 
-export interface CachedPageData {
+export type RotationValue = 0 | 90 | 180 | 270 
+
+export interface CachedPage {
   imageUrl: string;
   scale: number;
-  timestamp: number;
+  rotation: RotationValue;
+}
+
+export interface CachedThumbnail {
+  imageUrl: string;
 }
