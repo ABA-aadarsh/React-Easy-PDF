@@ -6,7 +6,7 @@ interface PDFContextType {
   thumbnailScale: number;
   setZoom: (z: number) => void;
   zoomCSS: number;
-  setZoomCSS: (z: number)=>void;
+  setZoomCSS: React.Dispatch<React.SetStateAction<number>>;
   headerRef?: React.RefObject<HTMLDivElement | null>;
   setHeaderRef?: (ref: React.RefObject<HTMLDivElement | null>) => void;
   numberOfPages: number;
@@ -48,7 +48,7 @@ interface PDFContextType {
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
 
 export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
-  const zoomStep = 0.4;
+  const zoomStep = 0.2;
   const thumbnailScale = 0.16;
   const [zoom, setZoom] = useState(1.33);
   const [zoomCSS, setZoomCSS] = useState<number>(1.33)

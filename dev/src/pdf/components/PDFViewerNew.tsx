@@ -299,6 +299,104 @@ export default function PDFViewer(
       setShouldPageBeScrolled(false)
     }
   },[shouldPageBeScrolled])
+
+
+
+
+
+
+
+
+    const isZoomingRef = useRef(false)
+    const zoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+     const minZoom = 0.1
+      const maxZoom = 3
+
+
+    useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      // Only handle zoom when Ctrl or Cmd is pressed
+      if (!(e.ctrlKey || e.metaKey)) return
+      
+      e.preventDefault()
+      e.stopPropagation()
+
+      // Set zooming flag
+      isZoomingRef.current = true
+
+      // Clear existing timeout
+      if (zoomTimeoutRef.current) {
+        clearTimeout(zoomTimeoutRef.current)
+      }
+
+      // Calculate zoom change
+      const delta = e.deltaY < 0 ? zoomStep : -zoomStep
+
+      const newZoom = Math.min(Math.max(zoomCSS + delta, minZoom), maxZoom)
+      
+      setZoomCSS((prevZoom:number) => {
+        
+        // Handle mouse-centered zoom
+        if (pageVirtualizerContainer.current) {
+          const container = pageVirtualizerContainer.current
+          const rect = container.getBoundingClientRect()
+          const mouseX = e.clientX - rect.left
+          const mouseY = e.clientY - rect.top
+          
+          // Calculate the center point in the scrollable content
+          const centerX = mouseX + container.scrollLeft
+          const centerY = mouseY + container.scrollTop
+          
+          // Calculate new scroll positions to keep the mouse point centered
+          const zoomRatio = newZoom / prevZoom
+          const newScrollLeft = centerX * zoomRatio - mouseX
+          const newScrollTop = centerY * zoomRatio - mouseY
+          
+          // Apply new scroll positions
+          requestAnimationFrame(() => {
+            container.scrollLeft = Math.max(0, newScrollLeft)
+            container.scrollTop = Math.max(0, newScrollTop)
+          })
+        }
+
+        return newZoom
+      })
+
+      // Debounce commit zoom for high-resolution rendering
+      zoomTimeoutRef.current = setTimeout(() => {
+        isZoomingRef.current = false
+        onCommitZoom(newZoom);
+      }, 300)
+    }
+    const container = pageVirtualizerContainer.current
+    if (container) {
+      container.addEventListener("wheel", handleWheel, { passive: false })
+      return () => {
+        container.removeEventListener("wheel", handleWheel)
+        if (zoomTimeoutRef.current) {
+          clearTimeout(zoomTimeoutRef.current)
+        }
+      }
+    }
+  }, [zoomCSS, zoomStep, onCommitZoom, pageVirtualizerContainer, pdfDocument.isDocumentLoading, layout.rotate])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   return (
     <Document
       file={pdfSource}
@@ -432,17 +530,8 @@ export default function PDFViewer(
       <div
         ref={pageVirtualizerContainer}
         className="pdf-page-virtualizer-container"
-        onWheel={(e) => {
-          if(e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? zoomStep : -zoomStep;
-            const newZoom = Math.min(Math.max(zoomCSS + delta, 0.1), 3);
-            setZoomCSS(newZoom);
-            onCommitZoom(newZoom);
-          }
-
-        }
-        }
+        
+        
         style={{
           height: `${layout.remainingHeightVh}vh`
         }}
