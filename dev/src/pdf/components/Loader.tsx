@@ -2,12 +2,12 @@ export default function Loader({ isLoading, progress }: { isLoading: boolean; pr
     if (!isLoading) return null;
     return (
         <div style={{
-            height:'5px',
+            height:'2px',
             width: `${progress ? progress : 80}%`,
             borderRadius: '5px',
             borderTopLeftRadius: '0px',
             borderBottomLeftRadius: '0px',
-            backgroundColor: '#0a7bd7ff',
+            backgroundColor: '#f506d5ff',
         }}>
         </div>
     )
