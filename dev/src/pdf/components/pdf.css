@@ -20,7 +20,7 @@
 }
 
 .pdf-react-pdf-page {
-  visibility: hidden !important;
+  /* visibility: hidden !important; */
   background-color: transparent !important;
   position: relative;
   z-index: 11;

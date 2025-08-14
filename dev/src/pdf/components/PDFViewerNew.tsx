@@ -186,7 +186,7 @@ export default function PDFViewer(
     estimateSize: getThumbnailEstimatedSize,
     gap: 10,
     paddingStart: 5,
-    
+
   })
 
   const onThumbnailRenderSuccess = useCallback((data: PageCallback, pageNumber: number) => {
@@ -274,13 +274,13 @@ export default function PDFViewer(
   }
 
   useEffect(() => {
-    // const prevScrollOffset = pageVirtualizer.scrollOffset
-    // const prevTotalHeight = pageVirtualizer.getTotalSize()
+    const prevScrollOffset = pageVirtualizer.scrollOffset
+    const prevTotalHeight = pageVirtualizer.getTotalSize()
     pageVirtualizer.measure()
-    // const newTotalHeight = pageVirtualizer.getTotalSize()
-    // const newScrollOffset = (prevScrollOffset! / prevTotalHeight) * newTotalHeight
-    // pageVirtualizer.scrollToOffset(newScrollOffset)
-    // console.log("page is remeasured")
+    const newTotalHeight = pageVirtualizer.getTotalSize()
+    const newScrollOffset = (prevScrollOffset! / prevTotalHeight) * newTotalHeight
+    pageVirtualizer.scrollToOffset(newScrollOffset)
+    console.log("page is remeasured")
   }, [zoomCSS, dimension.defaultPageHeight, layout.rotate])
 
   useEffect(() => {
@@ -291,97 +291,88 @@ export default function PDFViewer(
     handleScrollNoThrottle()
   }, [pageVirtualizer.scrollOffset, pdfDocument.isDocumentLoading, zoom, layout.rotate])
 
-  useEffect(()=>{
+  useEffect(() => {
     // callback for scroll update
-    if(shouldPageBeScrolled){
+    if (shouldPageBeScrolled) {
       const index = currentPage - 1
       pageVirtualizer.scrollToIndex(index)
       setShouldPageBeScrolled(false)
     }
-  },[shouldPageBeScrolled])
+  }, [shouldPageBeScrolled])
 
+// const isZoomingRef = useRef(false)
+// const zoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+// const minZoom = 0.1
+// const maxZoom = 3
 
-
-
-
-
-
-
-    const isZoomingRef = useRef(false)
-    const zoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-     const minZoom = 0.1
-      const maxZoom = 3
-
-
-    useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      // Only handle zoom when Ctrl or Cmd is pressed
-      if (!(e.ctrlKey || e.metaKey)) return
-      
-      e.preventDefault()
-      e.stopPropagation()
-
-      // Set zooming flag
-      isZoomingRef.current = true
-
-      // Clear existing timeout
-      if (zoomTimeoutRef.current) {
-        clearTimeout(zoomTimeoutRef.current)
-      }
-
-      // Calculate zoom change
-      const delta = e.deltaY < 0 ? zoomStep : -zoomStep
-
-      const newZoom = Math.min(Math.max(zoomCSS + delta, minZoom), maxZoom)
-      
-      setZoomCSS((prevZoom:number) => {
-        
-        // Handle mouse-centered zoom
-        if (pageVirtualizerContainer.current) {
-          const container = pageVirtualizerContainer.current
-          const rect = container.getBoundingClientRect()
-          const mouseX = e.clientX - rect.left
-          const mouseY = e.clientY - rect.top
-          
-          // Calculate the center point in the scrollable content
-          const centerX = mouseX + container.scrollLeft
-          const centerY = mouseY + container.scrollTop
-          
-          // Calculate new scroll positions to keep the mouse point centered
-          const zoomRatio = newZoom / prevZoom
-          const newScrollLeft = centerX * zoomRatio - mouseX
-          const newScrollTop = centerY * zoomRatio - mouseY
-          
-          // Apply new scroll positions
-          requestAnimationFrame(() => {
-            container.scrollLeft = Math.max(0, newScrollLeft)
-            container.scrollTop = Math.max(0, newScrollTop)
-          })
-        }
-
-        return newZoom
-      })
-
-      // Debounce commit zoom for high-resolution rendering
-      zoomTimeoutRef.current = setTimeout(() => {
-        isZoomingRef.current = false
-        onCommitZoom(newZoom);
-      }, 300)
-    }
-    const container = pageVirtualizerContainer.current
-    if (container) {
-      container.addEventListener("wheel", handleWheel, { passive: false })
-      return () => {
-        container.removeEventListener("wheel", handleWheel)
-        if (zoomTimeoutRef.current) {
-          clearTimeout(zoomTimeoutRef.current)
-        }
-      }
-    }
-  }, [zoomCSS, zoomStep, onCommitZoom, pageVirtualizerContainer, pdfDocument.isDocumentLoading, layout.rotate])
-
-
+// useEffect(() => {
+//  const handleWheel = (e: WheelEvent) => {
+//    if (!(e.ctrlKey || e.metaKey)) return
+   
+//    e.preventDefault()
+//    e.stopPropagation()
+   
+//    if (zoomTimeoutRef.current) {
+//      clearTimeout(zoomTimeoutRef.current)
+//    }
+   
+//    const container = pageVirtualizerContainer.current
+//    if (!container) return
+   
+//    // Calculate new zoom level
+//    const delta = e.deltaY < 0 ? zoomStep : -zoomStep
+//    const newZoom = Math.min(Math.max(zoomCSS + delta, minZoom), maxZoom)
+   
+//    if (newZoom === zoomCSS) return // No change needed
+   
+//    // Get container bounds and current scroll position
+//    const rect = container.getBoundingClientRect()
+//    const containerScrollTop = container.scrollTop
+   
+//    // Mouse position relative to the container viewport
+//    const mouseY = e.clientY - rect.top
+   
+//    // Get virtualizer offset (the offset of the first visible virtual item)
+//    const virtualizerOffset = pageVirtualizer.scrollOffset || 0
+   
+//    // Calculate the point in the content coordinate system that's under the mouse
+//    // This accounts for container scroll, virtualizer offset, and current zoom level
+//    const contentPointY = (containerScrollTop + mouseY + virtualizerOffset) / zoomCSS
+   
+//    // Calculate where this content point should be after zooming
+//    const newContentPointY = contentPointY * newZoom
+   
+//    // Calculate new scroll position to keep the content point under the mouse
+//    const newScrollTop = newContentPointY - mouseY - virtualizerOffset
+   
+//    // Update zoom first
+//    setZoomCSS(newZoom)
+   
+//    // Then adjust scroll position to maintain the zoom center
+//    requestAnimationFrame(() => {
+//      container.scrollTop = Math.max(0, newScrollTop)
+//    })
+   
+//    // Debounce expensive commit operations
+//    isZoomingRef.current = true
+//    zoomTimeoutRef.current = setTimeout(() => {
+//      isZoomingRef.current = false
+//      console.log("I am commiting new zoom ")
+//      onCommitZoom(newZoom)
+//    }, 150)
+//  }
+ 
+//  const container = pageVirtualizerContainer.current
+//  if (container) {
+//    container.addEventListener("wheel", handleWheel, { passive: false })
+//    return () => {
+//      container.removeEventListener("wheel", handleWheel)
+//      if (zoomTimeoutRef.current) {
+//        clearTimeout(zoomTimeoutRef.current)
+//      }
+//    }
+//  }
+// }, [zoomCSS, zoomStep, onCommitZoom, pageVirtualizerContainer, pageVirtualizer])
 
 
 
@@ -530,8 +521,8 @@ export default function PDFViewer(
       <div
         ref={pageVirtualizerContainer}
         className="pdf-page-virtualizer-container"
-        
-        
+
+
         style={{
           height: `${layout.remainingHeightVh}vh`
         }}
@@ -569,38 +560,35 @@ export default function PDFViewer(
                 const pageNumber = pageVirtualItem.index + 1;
                 const cachedImage = getBestCachedPage(pageNumber)
 
+                const pd = dimension.pageDimensions.get(pageNumber) || {
+                  width: dimension.defaultPageWidth,
+                  height: dimension.defaultPageHeight
+                }
+
                 let pageWidth = (dimension.pageDimensions.get(pageNumber)?.width || dimension.defaultPageWidth) * zoomCSS
 
                 if (layout.rotate == 90 || layout.rotate == 270) {
                   pageWidth = (dimension.pageDimensions.get(pageNumber)?.height || dimension.defaultPageHeight) * zoomCSS
                 }
-
                 let cachedImageWidth: number = pageWidth;
                 let cachedImageHeight: number = pageVirtualItem.size;
-
-                let finalScale = 1
                 let finalRotation = 0
 
-                if(cachedImage!=undefined){
-                  finalScale = (
-                    1/cachedImage.scale
-                  )*zoomCSS;
-
+                if (cachedImage != undefined) {
                   finalRotation = ((layout.rotate - cachedImage.rotation) % 360 + 360) % 360 as RotationValue
 
-                  if(finalRotation == 90 || finalRotation == 270) {
+                  if (finalRotation == 90 || finalRotation == 270) {
                     let temp = cachedImageWidth
                     cachedImageWidth = cachedImageHeight
                     cachedImageHeight = temp
                   }
                 }
-
                 return (
                   <div
                     key={pageVirtualItem.key}
                     style={{
-                      width: `${pageWidth}px`,
                       height: `${pageVirtualItem.size}px`,
+                      aspectRatio: `${pd.width / pd.height}`,
                       transform: `translateY(${pageVirtualItem.start}px) translateX(-50%)`,
                       overflow: "hidden"
                     }}
@@ -618,16 +606,16 @@ export default function PDFViewer(
                         }}
                       >
                         <img
-                          
+
                           src={cachedImage.imageUrl}
                           alt={`Page ${pageNumber} cached`}
                           className={`pdf-cached-image`}
                           style={{
                             transform: `rotate(${finalRotation}deg)`,
                             transformOrigin: "center center",
-                            width: `${cachedImageWidth}px`,
                             height: `${cachedImageHeight}px`,
-                            objectFit: "fill"
+                            aspectRatio: `${pd.width / pd.height}`,
+                            objectFit: "revert"
                           }}
                         />
                       </div>
@@ -637,8 +625,8 @@ export default function PDFViewer(
                       pageNumber={pageNumber}
                       scale={zoom}
                       rotate={layout.rotate}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
                       className={"pdf-react-pdf-page"}
                       onRenderSuccess={(data: PageCallback) => {
                         onPageRenderSuccess(data, pageNumber)
