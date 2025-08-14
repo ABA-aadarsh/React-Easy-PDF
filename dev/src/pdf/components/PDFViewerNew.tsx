@@ -274,13 +274,13 @@ export default function PDFViewer(
   }
 
   useEffect(() => {
-    const prevScrollOffset = pageVirtualizer.scrollOffset
-    const prevTotalHeight = pageVirtualizer.getTotalSize()
+    // const prevScrollOffset = pageVirtualizer.scrollOffset
+    // const prevTotalHeight = pageVirtualizer.getTotalSize()
     pageVirtualizer.measure()
-    const newTotalHeight = pageVirtualizer.getTotalSize()
-    const newScrollOffset = (prevScrollOffset! / prevTotalHeight) * newTotalHeight
-    pageVirtualizer.scrollToOffset(newScrollOffset)
-    console.log("page is remeasured")
+    // const newTotalHeight = pageVirtualizer.getTotalSize()
+    // const newScrollOffset = (prevScrollOffset! / prevTotalHeight) * newTotalHeight
+    // pageVirtualizer.scrollToOffset(newScrollOffset)
+    // console.log("page is remeasured")
   }, [zoomCSS, dimension.defaultPageHeight, layout.rotate])
 
   useEffect(() => {
@@ -575,6 +575,26 @@ export default function PDFViewer(
                   pageWidth = (dimension.pageDimensions.get(pageNumber)?.height || dimension.defaultPageHeight) * zoomCSS
                 }
 
+                let cachedImageWidth: number = pageWidth;
+                let cachedImageHeight: number = pageVirtualItem.size;
+
+                let finalScale = 1
+                let finalRotation = 0
+
+                if(cachedImage!=undefined){
+                  finalScale = (
+                    1/cachedImage.scale
+                  )*zoomCSS;
+
+                  finalRotation = ((layout.rotate - cachedImage.rotation) % 360 + 360) % 360 as RotationValue
+
+                  if(finalRotation == 90 || finalRotation == 270) {
+                    let temp = cachedImageWidth
+                    cachedImageWidth = cachedImageHeight
+                    cachedImageHeight = temp
+                  }
+                }
+
                 return (
                   <div
                     key={pageVirtualItem.key}
@@ -594,21 +614,20 @@ export default function PDFViewer(
                         style={{
                           width: "100%",
                           height: "100%",
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
                           overflow: "hidden"
                         }}
                       >
                         <img
+                          
                           src={cachedImage.imageUrl}
                           alt={`Page ${pageNumber} cached`}
-                          className="pdf-cached-image"
+                          className={`pdf-cached-image`}
                           style={{
-                            transform: `rotate(${((layout.rotate - cachedImage.rotation) % 360 + 360) % 360}deg)scale(${(1 / cachedImage.scale) * zoom
-                              })`,
+                            transform: `rotate(${finalRotation}deg)`,
                             transformOrigin: "center center",
-                            objectFit: "cover",
+                            width: `${cachedImageWidth}px`,
+                            height: `${cachedImageHeight}px`,
+                            objectFit: "fill"
                           }}
                         />
                       </div>
