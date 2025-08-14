@@ -34,6 +34,7 @@ export default function PDFViewer(
     setCurrentPage,
     setNumberOfPages,
     zoomStep,
+    onCommitZoom,
     shouldPageBeScrolled,
     setShouldPageBeScrolled
   } = usePDF()
@@ -431,6 +432,17 @@ export default function PDFViewer(
       <div
         ref={pageVirtualizerContainer}
         className="pdf-page-virtualizer-container"
+        onWheel={(e) => {
+          if(e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? zoomStep : -zoomStep;
+            const newZoom = Math.min(Math.max(zoomCSS + delta, 0.1), 3);
+            setZoomCSS(newZoom);
+            onCommitZoom(newZoom);
+          }
+
+        }
+        }
         style={{
           height: `${layout.remainingHeightVh}vh`
         }}

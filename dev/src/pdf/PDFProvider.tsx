@@ -42,7 +42,7 @@ interface PDFContextType {
   },
   shouldPageBeScrolled: boolean,
   setShouldPageBeScrolled: React.Dispatch<React.SetStateAction<boolean>>;
-  onCommitZoom: ()=>void
+  onCommitZoom: (x:number)=>void
 }
 
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
@@ -133,7 +133,10 @@ export const PDFProvider = ({ children }: { children: React.ReactNode }) => {
     setRotate
   };
 
-  const onCommitZoom = ()=>setZoom(zoomCSS);
+  const onCommitZoom = (newZoom: number)=> {
+      setZoom(newZoom);
+    console.log("Zoom committed:", newZoom);
+  };
   return (
     <PDFContext.Provider value={{
       headerRef,

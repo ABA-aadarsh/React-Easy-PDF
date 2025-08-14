@@ -2,7 +2,7 @@ import { usePDF } from "../PDFProvider";
 import { useEffect, useRef } from "react";
 
 export default function NavBar() {
-    const {setHeaderRef, zoomCSS,layout, setZoomCSS, numberOfPages=0, zoomStep=0.3 ,currentPage=1, setCurrentPage, setSidebarOpen, setShouldPageBeScrolled} = usePDF();
+    const {setHeaderRef, zoomCSS,layout,onCommitZoom, setZoomCSS, numberOfPages=0, zoomStep=0.3 ,currentPage=1, setCurrentPage, setSidebarOpen, setShouldPageBeScrolled} = usePDF();
     const navRef = useRef<HTMLDivElement | null>(null);
     
     // Set the header ref when component mounts
@@ -33,13 +33,13 @@ export default function NavBar() {
 
                 <div className="flex gap-5">
                     <button
-                        onClick={() => setZoomCSS(Math.max(zoomCSS - zoomStep, 0.1))}
+                        onClick={() => {setZoomCSS(Math.max(zoomCSS - zoomStep, 0.1)) ; onCommitZoom(Math.max(zoomCSS - zoomStep, 0.1))}}
                         className="ZoomButton"
                     >
                         -
                     </button>
                     <button
-                        onClick={() => setZoomCSS(Math.min(zoomCSS + zoomStep, 3))}
+                        onClick={() => {setZoomCSS(Math.min(zoomCSS + zoomStep, 3)); onCommitZoom(Math.min(zoomCSS + zoomStep, 3))}}
                         className="ZoomButton"
                     >
                         +
@@ -52,6 +52,7 @@ export default function NavBar() {
                         const value = parseFloat(e.target.value);
                         if (!isNaN(value)) {
                             setZoomCSS(Math.min(Math.max(value, 0.1), 3));
+                            onCommitZoom(Math.min(Math.max(value, 0.1), 3));
                         }
                     }}>
                         <option value="">Automatic</option>
@@ -70,15 +71,18 @@ export default function NavBar() {
                         <div className="flex-center" style={{gap:"5px"}}>
                             <button className="no-style flex-center"
                                 onClick={()=>{
-                                    setCurrentPage(prev=>prev - 1)
-                                    setShouldPageBeScrolled(true)
+                                    setCurrentPage(prev=> Math.max(prev - 1,1))
+                                    if (currentPage > 1){
+                                        setShouldPageBeScrolled(true)
+                                    }
                                 }}
                             ><img src="/svg/up.svg" alt="up" style={{height:"16px",color:"#fff"}} /></button> 
                             <button className="no-style flex-center" 
                             onClick={()=>{
-                                setCurrentPage(prev=>prev + 1)
-                                setShouldPageBeScrolled(true)
-                                
+                                setCurrentPage(prev=>Math.min(prev + 1, numberOfPages))
+                                if (currentPage < numberOfPages){
+                                    setShouldPageBeScrolled(true)
+                                }
                             }}>
                                 <img src="/svg/up.svg" alt="down" style={{height:"16px",color:"#fff",rotate:"180deg"}} />
                             </button> 
